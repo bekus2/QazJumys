@@ -1,0 +1,17 @@
+# Project: QazJumys
+# File: public/.htaccess
+# Author: Beck Sarbassov
+# Version: 1.0.0
+# Release Date: 2026-06-16
+# Last Updated: 2026-06-16
+# Copyright: © Beck Sarbassov. All rights reserved.
+#
+# EN: Protects directory listings and routes clean URLs to index.php.
+# RU: Защищает от просмотра директорий и направляет чистые URL в index.php.
+
+Options -Indexes
+RewriteEngine On
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
