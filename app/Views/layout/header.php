@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: header.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Opens the shared HTML layout and navigation.
- * RU: Открывает общий HTML-шаблон и навигацию.
+ * EN: Opens the shared HTML layout and marketplace navigation.
+ * RU: Открывает общий HTML-шаблон и навигацию маркетплейса.
  */
 
 $currentPage = (string) ($_GET['page'] ?? 'home');
@@ -22,10 +22,10 @@ $activeUser = $user ?? \QazJumys\Core\Auth::user();
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="<?= e(\QazJumys\Core\Csrf::token()) ?>">
     <title><?= e($pageTitle ?? 'QazJumys') ?> | QazJumys</title>
-    <meta name="description" content="Қазақстандағы SMM, жарнама, сайт, SEO, CRM, 1C, дизайн және видео бағыттарына арналған фриланс порталы.">
+    <meta name="description" content="Қазақстандағы SMM, жарнама, сайт, SEO, CRM, 1C, дизайн және видео бағыттарына арналған фриланс маркетплейс.">
     <meta name="robots" content="index, follow">
     <meta property="og:title" content="<?= e($pageTitle ?? 'QazJumys') ?> | QazJumys">
-    <meta property="og:description" content="Тапсырыс беруші мен орындаушыны бір жерде байланыстыратын Қазақстанға арналған digital фриланс порталы.">
+    <meta property="og:description" content="Тапсырыс беруші мен орындаушыны бір жерде байланыстыратын Қазақстанға арналған digital фриланс маркетплейс.">
     <meta property="og:type" content="website">
     <link rel="preload" href="<?= e(asset('img/hero-marketplace.png')) ?>" as="image">
     <link rel="stylesheet" href="<?= e(asset('css/style.css')) ?>">
@@ -35,7 +35,7 @@ $activeUser = $user ?? \QazJumys\Core\Auth::user();
     <div class="container nav-shell">
         <a class="brand" href="<?= e(url_for('home')) ?>" aria-label="QazJumys басты беті">
             <span class="brand-mark">Q</span>
-            <span>QazJumys</span>
+            <span class="brand-text">QazJumys</span>
         </a>
         <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu">
             <span></span>
@@ -44,9 +44,10 @@ $activeUser = $user ?? \QazJumys\Core\Auth::user();
         </button>
         <nav id="site-menu" class="site-nav" aria-label="Негізгі мәзір">
             <a class="<?= $currentPage === 'home' ? 'is-active' : '' ?>" href="<?= e(url_for('home')) ?>">Басты бет</a>
-            <a class="<?= $currentPage === 'projects' ? 'is-active' : '' ?>" href="<?= e(url_for('projects')) ?>">Жобалар</a>
+            <a class="<?= $currentPage === 'projects' ? 'is-active' : '' ?>" href="<?= e(url_for('projects')) ?>">Жұмыс табу</a>
+            <a href="<?= e(url_for('home')) ?>#talent">Мамандар</a>
             <?php if ($activeUser && $activeUser['role'] === 'client'): ?>
-                <a class="<?= $currentPage === 'project-create' ? 'is-active' : '' ?>" href="<?= e(url_for('project-create')) ?>">Жоба жариялау</a>
+                <a class="nav-cta <?= $currentPage === 'project-create' ? 'is-active' : '' ?>" href="<?= e(url_for('project-create')) ?>">Жоба жариялау</a>
             <?php endif; ?>
             <?php if ($activeUser): ?>
                 <a class="<?= $currentPage === 'dashboard' ? 'is-active' : '' ?>" href="<?= e(url_for('dashboard')) ?>">Кабинет</a>
@@ -58,7 +59,7 @@ $activeUser = $user ?? \QazJumys\Core\Auth::user();
                 </form>
             <?php else: ?>
                 <a class="<?= $currentPage === 'login' ? 'is-active' : '' ?>" href="<?= e(url_for('login')) ?>">Кіру</a>
-                <a class="nav-pill" href="<?= e(url_for('register')) ?>">Тіркелу</a>
+                <a class="nav-cta" href="<?= e(url_for('register')) ?>">Тіркелу</a>
             <?php endif; ?>
         </nav>
     </div>

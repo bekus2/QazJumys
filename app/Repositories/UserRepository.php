@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: UserRepository.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -49,7 +49,13 @@ final class UserRepository
      */
     public function find(int $id): ?array
     {
-        $statement = $this->pdo->prepare('SELECT id, role, name, email, city, bio, skills, created_at FROM users WHERE id = :id LIMIT 1');
+        $statement = $this->pdo->prepare(
+            'SELECT id, role, name, email, city, headline, bio, skills, hourly_rate, rating,
+                    reviews_count, completed_projects, response_time, is_verified, created_at
+             FROM users
+             WHERE id = :id
+             LIMIT 1'
+        );
         $statement->execute(['id' => $id]);
         $user = $statement->fetch();
 
@@ -66,8 +72,8 @@ final class UserRepository
     public function create(array $data): array
     {
         $statement = $this->pdo->prepare(
-            'INSERT INTO users (role, name, email, password_hash, city, bio, skills, created_at, updated_at)
-             VALUES (:role, :name, :email, :password_hash, :city, :bio, :skills, NOW(), NOW())'
+            'INSERT INTO users (role, name, email, password_hash, city, headline, bio, skills, hourly_rate, rating, reviews_count, completed_projects, response_time, is_verified, created_at, updated_at)
+             VALUES (:role, :name, :email, :password_hash, :city, :headline, :bio, :skills, :hourly_rate, 0.00, 0, 0, :response_time, 0, NOW(), NOW())'
         );
 
         $statement->execute([
@@ -76,8 +82,11 @@ final class UserRepository
             'email' => mb_strtolower((string) $data['email'], 'UTF-8'),
             'password_hash' => password_hash((string) $data['password'], PASSWORD_DEFAULT),
             'city' => $data['city'] ?? '',
+            'headline' => $data['headline'] ?? '',
             'bio' => $data['bio'] ?? '',
             'skills' => $data['skills'] ?? '',
+            'hourly_rate' => $data['hourly_rate'] ?? null,
+            'response_time' => $data['response_time'] ?? '',
         ]);
 
         return $this->find((int) $this->pdo->lastInsertId()) ?? [];
@@ -95,7 +104,13 @@ final class UserRepository
     {
         $statement = $this->pdo->prepare(
             'UPDATE users
-             SET name = :name, city = :city, bio = :bio, skills = :skills, updated_at = NOW()
+             SET name = :name,
+                 city = :city,
+                 headline = :headline,
+                 bio = :bio,
+                 skills = :skills,
+                 hourly_rate = :hourly_rate,
+                 updated_at = NOW()
              WHERE id = :id'
         );
 
@@ -103,10 +118,34 @@ final class UserRepository
             'id' => $id,
             'name' => $data['name'],
             'city' => $data['city'],
+            'headline' => $data['headline'],
             'bio' => $data['bio'],
             'skills' => $data['skills'],
+            'hourly_rate' => $data['hourly_rate'],
         ]);
 
         return $this->find($id);
+    }
+
+    /**
+     * EN: Returns verified freelancer profiles for public marketplace previews.
+     * RU: Возвращает проверенные профили исполнителей для публичных блоков маркетплейса.
+     *
+     * @param int $limit Maximum rows / Максимум строк
+     * @return array<int, array<string, mixed>>
+     */
+    public function topFreelancers(int $limit = 4): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT id, name, city, headline, skills, hourly_rate, rating, reviews_count, completed_projects, response_time, is_verified
+             FROM users
+             WHERE role = "freelancer"
+             ORDER BY is_verified DESC, rating DESC, completed_projects DESC, created_at DESC
+             LIMIT :limit'
+        );
+        $statement->bindValue('limit', $limit, PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll();
     }
 }

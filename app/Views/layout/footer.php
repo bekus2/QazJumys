@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: footer.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -20,11 +20,19 @@
                 <span class="brand-mark">Q</span>
                 <span>QazJumys</span>
             </a>
-            <p>Қазақстандағы digital жобаларға арналған тәуелсіз еңбек порталы.</p>
+            <p>Қазақстандағы digital жобаларға арналған фриланс маркетплейс.</p>
         </div>
         <div>
-            <h2>Бағыттар</h2>
-            <p>SMM, жарнама, сайт, SEO, CRM, 1C, дизайн және видео.</p>
+            <h2>Нарық</h2>
+            <a href="<?= e(url_for('projects')) ?>">Ашық жобалар</a>
+            <a href="<?= e(url_for('home')) ?>#categories">Категориялар</a>
+            <a href="<?= e(url_for('home')) ?>#talent">Мамандар</a>
+        </div>
+        <div>
+            <h2>Аккаунт</h2>
+            <a href="<?= e(url_for('register')) ?>">Тіркелу</a>
+            <a href="<?= e(url_for('login')) ?>">Кіру</a>
+            <a href="<?= e(url_for('profile')) ?>">Профиль</a>
         </div>
         <div>
             <h2>Байланыс</h2>

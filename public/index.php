@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: index.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -28,6 +28,24 @@ $dbReady = false;
 $dbNotice = null;
 $categories = CategoryRepository::fallback();
 $projects = [];
+$featuredProjects = [];
+$topFreelancers = [];
+$recommendedProjects = [];
+$marketplaceStats = [
+    'open_projects' => 0,
+    'proposals' => 0,
+    'freelancers' => 0,
+    'categories' => count($categories),
+];
+$projectFilters = [
+    'category_id' => $_GET['category_id'] ?? null,
+    'q' => trim((string) ($_GET['q'] ?? '')),
+    'project_type' => $_GET['project_type'] ?? '',
+    'experience_level' => $_GET['experience_level'] ?? '',
+    'budget_min' => is_numeric($_GET['budget_min'] ?? null) ? (float) $_GET['budget_min'] : null,
+    'budget_max' => is_numeric($_GET['budget_max'] ?? null) ? (float) $_GET['budget_max'] : null,
+    'sort' => $_GET['sort'] ?? 'latest',
+];
 $dashboardStats = ['projects' => 0, 'proposals' => 0, 'open_market' => 0];
 $profile = $user;
 $myProjects = [];
@@ -40,16 +58,16 @@ try {
     $projectRepository = new ProjectRepository($pdo);
     $userRepository = new UserRepository($pdo);
     $categories = $categoryRepository->all();
+    $marketplaceStats = $projectRepository->marketplaceStats();
 
     if ($page === 'home') {
         $projects = $projectRepository->latestOpen(6);
+        $featuredProjects = $projectRepository->featuredOpen(3);
+        $topFreelancers = $userRepository->topFreelancers(4);
     }
 
     if ($page === 'projects') {
-        $projects = $projectRepository->searchOpen([
-            'category_id' => $_GET['category_id'] ?? null,
-            'q' => trim((string) ($_GET['q'] ?? '')),
-        ]);
+        $projects = $projectRepository->searchOpen($projectFilters);
     }
 
     if ($user && $page === 'dashboard') {
@@ -57,6 +75,7 @@ try {
         $profile = $userRepository->find((int) $user['id']) ?? $user;
         $myProjects = $user['role'] === 'client' ? $projectRepository->byClient((int) $user['id']) : [];
         $myProposals = $user['role'] === 'freelancer' ? $projectRepository->proposalsByFreelancer((int) $user['id']) : [];
+        $recommendedProjects = $user['role'] === 'freelancer' ? $projectRepository->latestOpen(3) : [];
     }
 
     if ($user && $page === 'profile') {
@@ -95,6 +114,11 @@ render_view($route['view'], [
     'dbNotice' => $dbNotice,
     'categories' => $categories,
     'projects' => $projects,
+    'featuredProjects' => $featuredProjects,
+    'topFreelancers' => $topFreelancers,
+    'recommendedProjects' => $recommendedProjects,
+    'marketplaceStats' => $marketplaceStats,
+    'projectFilters' => $projectFilters,
     'dashboardStats' => $dashboardStats,
     'profile' => $profile,
     'myProjects' => $myProjects,

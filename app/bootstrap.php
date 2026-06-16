@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: bootstrap.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -145,6 +145,64 @@ function url_for(string $page = 'home', array $params = []): string
 function asset(string $path): string
 {
     return 'assets/' . ltrim($path, '/');
+}
+
+/**
+ * EN: Formats Kazakhstan tenge amounts for compact marketplace cards.
+ * RU: Форматирует суммы в тенге для компактных карточек маркетплейса.
+ *
+ * @param mixed $value Numeric value / Числовое значение
+ * @return string
+ */
+function format_money(mixed $value): string
+{
+    return number_format((float) $value, 0, '.', ' ') . ' ₸';
+}
+
+/**
+ * EN: Returns a public label for a project billing type.
+ * RU: Возвращает публичную подпись типа оплаты проекта.
+ *
+ * @param string $type Project billing type / Тип оплаты проекта
+ * @return string
+ */
+function project_type_label(string $type): string
+{
+    return match ($type) {
+        'hourly' => 'Сағаттық',
+        default => 'Бір жолғы',
+    };
+}
+
+/**
+ * EN: Returns a public label for required experience level.
+ * RU: Возвращает публичную подпись требуемого уровня опыта.
+ *
+ * @param string $level Experience level / Уровень опыта
+ * @return string
+ */
+function experience_level_label(string $level): string
+{
+    return match ($level) {
+        'entry' => 'Junior',
+        'expert' => 'Expert',
+        default => 'Middle',
+    };
+}
+
+/**
+ * EN: Converts comma-separated skills into clean display chips.
+ * RU: Преобразует навыки через запятую в чистые теги для вывода.
+ *
+ * @param mixed $skills Comma-separated skill list / Список навыков через запятую
+ * @param int $limit Maximum chips / Максимум тегов
+ * @return array<int, string>
+ */
+function skill_chips(mixed $skills, int $limit = 5): array
+{
+    $parts = array_filter(array_map('trim', explode(',', (string) $skills)));
+
+    return array_slice($parts, 0, $limit);
 }
 
 /**

@@ -2,7 +2,7 @@
  * Project: QazJumys
  * File: app.js
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -59,6 +59,24 @@
         $button.removeClass('is-loading').prop('disabled', false).text($button.data('label') || $button.text());
     }
 
+    /**
+     * EN: Checks budget fields before sending project forms to the backend.
+     * RU: Проверяет поля бюджета перед отправкой проектных форм на backend.
+     *
+     * @param {jQuery} $form Submitted form / Отправляемая форма
+     * @returns {boolean}
+     */
+    function hasValidBudgetRange($form) {
+        var $min = $form.find('[name="budget_min"]');
+        var $max = $form.find('[name="budget_max"]');
+
+        if (!$min.length || !$max.length || $min.val() === '' || $max.val() === '') {
+            return true;
+        }
+
+        return Number($max.val()) >= Number($min.val());
+    }
+
     $(function () {
         var $body = $('body');
         var $nav = $('#site-menu');
@@ -83,6 +101,11 @@
             var $form = $(this);
             var $button = $form.find('[type="submit"]').first();
             var token = $('meta[name="csrf-token"]').attr('content') || '';
+
+            if (!hasValidBudgetRange($form)) {
+                showToast('Бюджеттің жоғарғы шегі төменгі шектен аз болмауы керек.', 'error');
+                return;
+            }
 
             setLoading($button, true);
 

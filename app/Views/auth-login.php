@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: auth-login.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -16,8 +16,8 @@
     <div class="container auth-grid compact">
         <div class="auth-copy">
             <span class="eyebrow">Кіру</span>
-            <h1>Жеке кабинетке оралыңыз</h1>
-            <p>Жобаларды, ұсыныстарды және профиль ақпаратын бір жерден басқарыңыз.</p>
+            <h1>Кабинетке кіру</h1>
+            <p>Жобалар, ұсыныстар, профиль және нарықтағы жаңа тапсырмалар бір жерде.</p>
         </div>
         <form class="panel form js-ajax-form" action="ajax.php" method="post" data-success-redirect="<?= e(url_for('dashboard')) ?>">
             <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
