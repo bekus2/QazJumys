@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: projects.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Displays searchable open projects and secure proposal forms.
- * RU: Показывает поиск открытых проектов и защищенные формы отклика.
+ * EN: Displays searchable open projects and secure proposal forms for unified accounts.
+ * RU: Показывает поиск открытых проектов и защищенные формы отклика для единых аккаунтов.
  */
 
 $filters = $projectFilters ?? [];
@@ -26,7 +26,7 @@ $budgetMax = $filters['budget_max'] ?? null;
         <div>
             <span class="eyebrow">Жобалар</span>
             <h1>Ашық digital тапсырмалар</h1>
-            <p>Категория, бюджет, дағды және мерзім бойынша таңдаңыз. Орындаушы аккаунты ұсыныс жібере алады.</p>
+            <p>Категория, бюджет, дағды және мерзім бойынша таңдаңыз. Бір аккаунтпен жоба жариялап та, ұсыныс жіберіп те жұмыс істей аласыз.</p>
         </div>
         <div class="page-stat">
             <strong><?= count($projects) ?></strong>
@@ -130,7 +130,7 @@ $budgetMax = $filters['budget_max'] ?? null;
                             <span>Тапсырыс беруші</span>
                             <strong><?= e($project['client_name']) ?></strong>
                         </div>
-                        <?php if ($user && $user['role'] === 'freelancer'): ?>
+                        <?php if ($user && ($user['role'] ?? '') !== 'owner' && (int) $user['id'] !== (int) $project['client_id']): ?>
                             <form class="form mini js-ajax-form" action="ajax.php" method="post">
                                 <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
                                 <input type="hidden" name="action" value="proposal_create">
@@ -151,11 +151,14 @@ $budgetMax = $filters['budget_max'] ?? null;
                                 </div>
                                 <button class="btn btn-primary btn-full" type="submit">Ұсыныс жіберу</button>
                             </form>
-                        <?php elseif ($user && $user['role'] === 'client'): ?>
-                            <p class="muted">Сіз тапсырыс беруші аккаунтымен кірдіңіз.</p>
+                        <?php elseif ($user && (int) $user['id'] === (int) $project['client_id']): ?>
+                            <p class="muted">Бұл сіздің жобаңыз. Келген откликтер кабинетте басқарылады.</p>
                             <a class="btn btn-small" href="<?= e(url_for('project-create')) ?>">Жаңа жоба</a>
+                        <?php elseif ($user && ($user['role'] ?? '') === 'owner'): ?>
+                            <p class="muted">Owner аккаунты басқаруға арналған.</p>
+                            <a class="btn btn-small" href="owner.php">Owner panel</a>
                         <?php else: ?>
-                            <p class="muted">Ұсыныс жіберу үшін орындаушы аккаунты қажет.</p>
+                            <p class="muted">Ұсыныс жіберу үшін аккаунт ашыңыз.</p>
                             <a class="btn btn-small" href="<?= e(url_for('register')) ?>">Тіркелу</a>
                         <?php endif; ?>
                     </aside>

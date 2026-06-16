@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: header.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Opens the shared HTML layout and marketplace navigation.
- * RU: Открывает общий HTML-шаблон и навигацию маркетплейса.
+ * EN: Opens the shared HTML layout and unified marketplace navigation.
+ * RU: Открывает общий HTML-шаблон и навигацию единого маркетплейса.
  */
 
 $currentPage = (string) ($_GET['page'] ?? 'home');
@@ -46,10 +46,13 @@ $activeUser = $user ?? \QazJumys\Core\Auth::user();
             <a class="<?= $currentPage === 'home' ? 'is-active' : '' ?>" href="<?= e(url_for('home')) ?>">Басты бет</a>
             <a class="<?= $currentPage === 'projects' ? 'is-active' : '' ?>" href="<?= e(url_for('projects')) ?>">Жұмыс табу</a>
             <a href="<?= e(url_for('home')) ?>#talent">Мамандар</a>
-            <?php if ($activeUser && $activeUser['role'] === 'client'): ?>
+            <?php if ($activeUser && ($activeUser['role'] ?? '') !== 'owner'): ?>
                 <a class="nav-cta <?= $currentPage === 'project-create' ? 'is-active' : '' ?>" href="<?= e(url_for('project-create')) ?>">Жоба жариялау</a>
             <?php endif; ?>
             <?php if ($activeUser): ?>
+                <?php if (($activeUser['role'] ?? '') === 'owner'): ?>
+                    <a class="nav-cta" href="owner.php">Owner</a>
+                <?php endif; ?>
                 <a class="<?= $currentPage === 'dashboard' ? 'is-active' : '' ?>" href="<?= e(url_for('dashboard')) ?>">Кабинет</a>
                 <a class="<?= $currentPage === 'profile' ? 'is-active' : '' ?>" href="<?= e(url_for('profile')) ?>">Профиль</a>
                 <form class="logout-form js-ajax-form" action="ajax.php" method="post" data-success-redirect="<?= e(url_for('home')) ?>">

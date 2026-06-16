@@ -2,339 +2,167 @@
 
 ## English
 
-### Project Description
-QazJumys is a Kazakhstan-focused freelance marketplace for digital work. Version 1.1.0 includes a stronger marketplace interface, searchable project listings, project filters, featured/urgent project flags, richer client project briefs, freelancer profile cards, dashboard previews, secure AJAX forms, and separate production-safe and demo SQL seed files.
-
-The public interface is in Kazakh. Project documentation is maintained in English and Russian for handoff and GitHub collaboration.
+QazJumys is a Kazakhstan-focused freelance marketplace for digital work. Version 1.2.0 includes unified member accounts, project publishing, proposal acceptance, work submission/completion workflow, protected messaging, protected file uploads, in-app/email notification logs, complaint handling, and a protected owner administration panel at `public/owner.php`.
 
 ### System Requirements
-- PHP 8.1 or newer; PHP 8.3 is recommended for production.
-- MySQL 8.0 or MariaDB 10.6 or newer.
-- Apache or Nginx with the document root pointed to `public/` when possible.
-- PHP extensions: `pdo`, `pdo_mysql`, `mbstring`, `session`, `json`.
-- Modern browser with JavaScript enabled.
 
-### Installation
-1. Clone the repository.
-2. Copy `.env.example` to `.env`.
-3. Update `APP_URL`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD`.
-4. Import `database/schema.sql`.
-5. Import `database/seed.sql` for production-safe categories.
-6. Optional local preview only: import `database/demo.sql` to add demo users, projects, and proposals.
-7. Set the web server document root to `public/`. If hosting cannot point to `public/`, the root `.htaccess` routes requests into `public/`.
+- PHP 8.1 or newer with `pdo_mysql`, `mbstring`, `fileinfo`, and sessions enabled.
+- MySQL/MariaDB 10.4+.
+- Web server pointing to the `public` directory where possible.
+- Open Server Panel on Windows is supported for local work.
 
-### Local Run With OpenServer on This Computer
-OpenServer Panel is installed at `C:\OSPanel`.
+### Local Installation with OpenServer
 
-Current local setup prepared for this project:
-- Project path: `C:\Users\Beck-S\Documents\GitHub\Experimental-Project-002`
-- OpenServer junction: `C:\OSPanel\domains\localhost\qazjumys`
-- Local URL: `http://localhost:8080/qazjumys/`
-- MariaDB: `127.0.0.1:3306`
-- Database: `qazjumys_portal`
-- Local PHP binary: `C:\OSPanel\modules\php\PHP_8.1\php.exe`
-- MariaDB client: `C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe`
+1. Copy `.env.example` to `.env`.
+2. Set database values in `.env`:
 
-OpenServer import commands:
-```bat
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\schema.sql
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\seed.sql
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\demo.sql
+```ini
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=qazjumys_portal
+DB_USERNAME=root
+DB_PASSWORD=
+APP_URL=http://localhost:8080/qazjumys
+MAIL_ENABLED=false
 ```
 
-Important: use `--default-character-set=utf8mb4` when importing SQL, otherwise Kazakh and Russian text can be corrupted.
+3. Import SQL in this order:
 
-Alternative quick run:
-```bat
-"C:\OSPanel\modules\php\PHP_8.1\php.exe" -S localhost:8090 -t public
+```powershell
+cmd /c 'type "database\schema.sql" | "C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot'
+cmd /c 'type "database\seed.sql" | "C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot qazjumys_portal'
+cmd /c 'type "database\demo.sql" | "C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot qazjumys_portal'
 ```
 
-### Usage
-- Guests can browse the homepage, categories, open projects, featured projects, and freelancer previews.
-- Clients can register, log in, publish rich project briefs, view proposal counters, and edit profiles.
-- Freelancers can register, log in, filter open projects, send proposals, track sent proposals, and edit profile cards.
+4. Open the local site:
 
-### Folder and File Structure
 ```text
-app/
-  Config/          Application configuration
-  Core/            Database, auth, CSRF, validation, response helpers
-  Repositories/    MySQL data access layer
-  Views/           PHP templates
-database/
-  schema.sql       Full database schema for new installs
-  seed.sql         Production-safe category seed
-  demo.sql         Optional local demo users/projects/proposals
-  upgrade_1_1_0.sql Upgrade script from v1.0.0 database shape
-public/
-  assets/          CSS, JavaScript, vendor files, images
-  ajax.php         AJAX endpoint
-  index.php        Front controller
-storage/
-  cache/           Reserved cache folder
-  logs/            Reserved log folder
+http://localhost:8080/qazjumys/
+http://localhost:8080/qazjumys/owner.php
 ```
 
-### Backend
-The backend is plain PHP with PDO. It uses prepared statements, password hashing, session authentication, CSRF tokens, role checks, server-side validation, and a private application folder outside direct public access.
+### Default Owner Account
 
-### Frontend
-The frontend uses semantic HTML5, CSS3, JavaScript, jQuery, and AJAX. Version 1.1.0 adds a denser marketplace-style layout, mobile navigation, advanced filters, project chips, freelancer cards, and responsive desktop/mobile breakpoints.
+For first local installation only:
 
-### API and AJAX
-`public/ajax.php` accepts POST requests with a CSRF token.
-
-Supported actions:
-- `register`
-- `login`
-- `logout`
-- `project_create`
-- `proposal_create`
-- `profile_update`
-
-### Database
-MySQL tables:
-- `users`
-- `categories`
-- `projects`
-- `proposals`
-
-Version 1.1.0 project fields include project type, experience level, skills, location, remote flag, featured flag, urgent flag, budget range, deadline, status, and proposal counters.
-
-For a fresh install, import:
-1. `database/schema.sql`
-2. `database/seed.sql`
-3. Optional local only: `database/demo.sql`
-
-For an existing v1.0.0 database, back up the database first, then run `database/upgrade_1_1_0.sql` once and import `database/seed.sql`.
-
-### Forms and Notifications
-Version 1.1.0 includes backend form handling for registration, login, project publishing, proposal sending, and profile editing. Email notification sending is not implemented yet. Default notification email for future integration: `bek0435@gmail.com`.
-
-### Authorization and Authentication
-Authentication is session-based. Passwords are hashed with `password_hash()`. Client-only actions and freelancer-only actions are separated by role checks. State-changing AJAX requests require CSRF tokens.
-
-### Admin Panel
-Version 1.1.0 does not include an admin panel. No default admin account is active in the application.
-
-Reserved local admin credentials for a future admin module:
 - Login: `bek0435@gmail.com`
 - Password: `0123456789+Aa`
 
-Security note: these credentials are only reserved for a future local/initial admin module. Change them immediately after first login and before any production deployment. Do not display admin credentials on public pages.
+Security note: these are initial development credentials. Change them immediately after the first login, especially before production deployment. Do not display these credentials on public pages.
+
+### Production Hosting Deployment
+
+1. Upload project files to hosting.
+2. Configure the web server document root to `public`. If hosting cannot point to `public`, keep `app`, `database`, `storage`, `.env`, and documentation protected from direct HTTP access.
+3. Create a MySQL/MariaDB database with `utf8mb4_unicode_ci`.
+4. Import:
+
+```sql
+database/schema.sql
+database/seed.sql
+```
+
+Use `database/demo.sql` only for local/demo environments.
+
+5. Create `.env` on the server and set production values:
+
+```ini
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-domain.example
+DB_HOST=your-db-host
+DB_PORT=3306
+DB_DATABASE=your-db-name
+DB_USERNAME=your-db-user
+DB_PASSWORD=your-secure-password
+MAIL_ENABLED=true
+MAIL_FROM=no-reply@your-domain.example
+UPLOAD_MAX_BYTES=5242880
+```
+
+6. Make `storage/uploads`, `storage/logs`, and `storage/cache` writable by PHP, but not publicly browsable.
+7. Verify `owner.php` login, project publishing, proposal acceptance, messaging, upload/download, and completion workflow.
+8. Change the default owner password.
+9. Enable HTTPS and keep `.env`, backups, logs, and uploads protected.
+
+### Upgrade from v1.1.0
+
+Back up files and database first, then run:
+
+```powershell
+cmd /c 'type "database\upgrade_1_2_0.sql" | "C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot qazjumys_portal'
+```
+
+### Main Features
+
+- Unified member account: one account can publish projects and submit proposals.
+- Project workflow: `open -> in_progress -> submitted -> completed`.
+- Proposal actions: send, accept, decline, complete.
+- Messaging between project participants.
+- Protected project file uploads and downloads.
+- Complaint form and owner moderation queue.
+- Owner panel: statistics, users, block/unblock, password reset, complaints, project status management, email logs, audit logs.
+- Email notification logging, with optional PHP `mail()` sending when `MAIL_ENABLED=true`.
+- Lightweight automated tests and GitHub Actions CI.
+
+### Folder Structure
+
+- `app/Config` - environment-driven configuration.
+- `app/Core` - auth, CSRF, database, validation, upload, response helpers.
+- `app/Repositories` - database access for users, projects, messages, files, complaints, notifications, owner tools.
+- `app/Views` - PHP templates.
+- `public` - web entry points, assets, `owner.php`, `download.php`.
+- `database` - schema, seed, demo, upgrade SQL.
+- `storage` - private uploads, logs, cache.
+- `tests` - lightweight CI checks.
+- `.github/workflows` - GitHub Actions CI.
+
+### Testing
+
+```powershell
+C:\OSPanel\modules\php\PHP_8.1\php.exe tests\run.php
+```
+
+GitHub Actions runs the same test suite on pushes and pull requests.
 
 ### Security Notes
-- Keep `.env` out of Git.
-- Change all local/demo credentials before production.
-- Do not import `database/demo.sql` into production unless demo accounts are removed immediately.
-- Use HTTPS in production.
-- Keep `app/`, `database/`, and `storage/` outside public document access.
-- CSRF protection is enabled for state-changing AJAX requests.
-- User input is validated and escaped before display.
-- Use `--default-character-set=utf8mb4` when importing SQL.
 
-### Deployment to Hosting
-1. Create a MySQL/MariaDB database in the hosting control panel.
-2. Create a database user and grant privileges only to this project database.
-3. Upload all project files to the hosting account.
-4. If the hosting panel supports it, set domain document root to `public/`.
-5. If document root cannot be changed, upload the full project to the web root and keep the root `.htaccess` enabled.
-6. Copy `.env.example` to `.env`.
-7. Set production values:
-   ```env
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://your-domain.kz
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_DATABASE=your_database
-   DB_USERNAME=your_user
-   DB_PASSWORD=your_strong_password
-   ```
-8. Import `database/schema.sql`.
-9. Import `database/seed.sql`.
-10. Do not import `database/demo.sql` on production.
-11. Ensure `storage/logs` and `storage/cache` are writable if future logging/cache features are enabled.
-12. Enable HTTPS/SSL.
-13. Test homepage, registration, login, project creation, project search, proposal creation, and profile editing.
-14. Remove installation leftovers, database dumps, and temporary files from public hosting.
+Passwords are hashed with `password_hash()`. State-changing actions use CSRF tokens. SQL uses prepared statements. Uploads are MIME/size checked and stored outside `public`. Owner tools require an owner session. `.env`, logs, backups, and uploads must remain protected.
 
 ### Scaling Recommendations
-- Add admin moderation for users, projects, proposals, and categories.
-- Add direct messaging between clients and freelancers.
-- Add project status workflow and contract milestones.
-- Add private file uploads with validation and virus scanning.
-- Add email notifications, rate limiting, and audit logs.
-- Add automated tests and CI.
-- Add full-text relevance tuning or a dedicated search service.
+
+Future improvements should add password self-change, SMTP provider integration, payment/escrow, richer dispute workflow, reviews, notifications over queues, pagination/search in owner tables, and a REST API only when needed.
 
 ## Русский
 
-### Описание проекта
-QazJumys — фриланс-маркетплейс для digital-задач в Казахстане. Версия 1.1.0 включает более зрелый интерфейс маркетплейса, поиск проектов, фильтры, признаки featured/urgent, расширенный brief проекта, карточки исполнителей, кабинет по ролям, защищенные AJAX-формы и отдельные SQL-файлы для production seed и локальных демо-данных.
+QazJumys — фриланс-маркетплейс для digital-задач в Казахстане. Версия 1.2.0 включает единый аккаунт участника, публикацию проектов, прием откликов, сдачу и завершение работы, защищенные сообщения, загрузку файлов, уведомления, жалобы и защищенную owner-панель `public/owner.php`.
 
-Публичный интерфейс выполнен на казахском языке. Документация ведется на английском и русском языках.
+### Требования
 
-### Системные требования
-- PHP 8.1 или новее; для production рекомендуется PHP 8.3.
-- MySQL 8.0 или MariaDB 10.6 или новее.
-- Apache или Nginx с document root на `public/`, если хостинг это поддерживает.
-- PHP-расширения: `pdo`, `pdo_mysql`, `mbstring`, `session`, `json`.
-- Современный браузер с включенным JavaScript.
+- PHP 8.1+ с `pdo_mysql`, `mbstring`, `fileinfo`, sessions.
+- MySQL/MariaDB 10.4+.
+- Веб-сервер, желательно с document root на папку `public`.
+- Open Server Panel поддерживается для локального запуска.
 
-### Установка
-1. Клонируйте репозиторий.
-2. Скопируйте `.env.example` в `.env`.
-3. Настройте `APP_URL`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD`.
-4. Импортируйте `database/schema.sql`.
-5. Импортируйте `database/seed.sql` для безопасных production-категорий.
-6. Только для локальной проверки: импортируйте `database/demo.sql`.
-7. Настройте document root сервера на `public/`. Если это невозможно, корневой `.htaccess` направляет запросы в `public/`.
+### Локальный запуск в OpenServer
 
-### Локальный запуск в OpenServer на этом компьютере
-OpenServer Panel установлен в `C:\OSPanel`.
+1. Скопируйте `.env.example` в `.env`.
+2. Настройте базу и URL в `.env`.
+3. Импортируйте `database/schema.sql`, затем `database/seed.sql`, затем при необходимости `database/demo.sql`.
+4. Откройте `http://localhost:8080/qazjumys/` и `http://localhost:8080/qazjumys/owner.php`.
 
-Текущая локальная настройка:
-- Путь проекта: `C:\Users\Beck-S\Documents\GitHub\Experimental-Project-002`
-- Junction OpenServer: `C:\OSPanel\domains\localhost\qazjumys`
-- Локальный URL: `http://localhost:8080/qazjumys/`
-- MariaDB: `127.0.0.1:3306`
-- База данных: `qazjumys_portal`
-- PHP: `C:\OSPanel\modules\php\PHP_8.1\php.exe`
-- MySQL client: `C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe`
+### Развертывание на хостинг
 
-Команды импорта для OpenServer:
-```bat
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\schema.sql
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\seed.sql
-"C:\OSPanel\modules\database\MariaDB-10.8-Win10\bin\mysql.exe" --default-character-set=utf8mb4 -uroot < database\demo.sql
-```
+1. Загрузите файлы проекта.
+2. Направьте домен на `public`.
+3. Создайте базу MySQL/MariaDB в кодировке `utf8mb4_unicode_ci`.
+4. Импортируйте `schema.sql` и `seed.sql`; `demo.sql` не используйте в production.
+5. Создайте `.env` с production-настройками, отключите `APP_DEBUG`, настройте БД и почту.
+6. Дайте PHP права записи на `storage/uploads`, `storage/logs`, `storage/cache`.
+7. Проверьте вход owner, публикацию проекта, отклик, прием, сообщения, файлы и завершение.
+8. Смените пароль owner сразу после первого входа.
 
-Важно: при импорте SQL используйте `--default-character-set=utf8mb4`, иначе казахский и русский текст может испортиться.
-
-Альтернативный быстрый запуск:
-```bat
-"C:\OSPanel\modules\php\PHP_8.1\php.exe" -S localhost:8090 -t public
-```
-
-### Использование
-- Гости просматривают главную страницу, категории, открытые проекты, featured-проекты и карточки исполнителей.
-- Заказчики регистрируются, входят в систему, публикуют проекты, смотрят счетчики откликов и редактируют профиль.
-- Исполнители регистрируются, входят в систему, фильтруют проекты, отправляют предложения, отслеживают отклики и редактируют профиль.
-
-### Структура папок и файлов
-```text
-app/
-  Config/          Конфигурация приложения
-  Core/            Database, auth, CSRF, validation, response helpers
-  Repositories/    Слой доступа к MySQL
-  Views/           PHP-шаблоны
-database/
-  schema.sql       Полная схема для новой установки
-  seed.sql         Безопасные production-категории
-  demo.sql         Локальные демо-пользователи, проекты и отклики
-  upgrade_1_1_0.sql Скрипт обновления базы с v1.0.0
-public/
-  assets/          CSS, JavaScript, vendor-файлы, изображения
-  ajax.php         AJAX endpoint
-  index.php        Front controller
-storage/
-  cache/           Резервная папка кэша
-  logs/            Резервная папка логов
-```
-
-### Backend
-Backend написан на чистом PHP с PDO. Используются подготовленные SQL-запросы, хеширование паролей, сессии, CSRF-токены, проверки ролей, серверная валидация и разделение public/private файлов.
-
-### Frontend
-Frontend использует HTML5, CSS3, JavaScript, jQuery и AJAX. Версия 1.1.0 добавляет плотный marketplace layout, мобильную навигацию, расширенные фильтры, теги навыков, карточки исполнителей и адаптивные desktop/mobile breakpoints.
-
-### API и AJAX
-`public/ajax.php` принимает POST-запросы с CSRF-токеном.
-
-Поддерживаемые действия:
-- `register`
-- `login`
-- `logout`
-- `project_create`
-- `proposal_create`
-- `profile_update`
-
-### База данных
-Таблицы MySQL:
-- `users`
-- `categories`
-- `projects`
-- `proposals`
-
-Поля проекта в v1.1.0: тип оплаты, уровень опыта, навыки, локация, удаленный формат, featured, urgent, бюджет, срок, статус и счетчик откликов.
-
-Для новой установки импортируйте:
-1. `database/schema.sql`
-2. `database/seed.sql`
-3. Только локально при необходимости: `database/demo.sql`
-
-Для базы v1.0.0 сначала сделайте backup, затем один раз выполните `database/upgrade_1_1_0.sql` и импортируйте `database/seed.sql`.
-
-### Формы и уведомления
-Версия 1.1.0 содержит backend-обработчики регистрации, входа, публикации проекта, отправки предложения и редактирования профиля. Email-уведомления пока не реализованы. Email по умолчанию для будущих уведомлений: `bek0435@gmail.com`.
-
-### Авторизация и аутентификация
-Аутентификация основана на сессиях. Пароли хешируются через `password_hash()`. Действия заказчика и исполнителя разделены проверками ролей. Все POST AJAX действия требуют CSRF-токен.
-
-### Панель администратора
-В версии 1.1.0 панель администратора не включена. Активного администратора по умолчанию в приложении нет.
-
-Зарезервированные локальные учетные данные для будущего admin-модуля:
-- Логин: `bek0435@gmail.com`
-- Пароль: `0123456789+Aa`
-
-Важно: эти учетные данные предназначены только для будущей локальной/начальной установки admin-модуля. Их нужно изменить сразу после первого входа и до production-развертывания. Не отображайте учетные данные администратора на публичных страницах.
-
-### Безопасность
-- Не добавляйте `.env` в Git.
-- Меняйте локальные/демо-учетные данные перед production.
-- Не импортируйте `database/demo.sql` в production, если демо-аккаунты не будут сразу удалены.
-- Используйте HTTPS в production.
-- Папки `app/`, `database/`, `storage/` не должны быть доступны напрямую из web.
-- CSRF-защита включена для AJAX-запросов, меняющих состояние.
-- Пользовательский ввод валидируется и экранируется перед выводом.
-- Импортируйте SQL с `--default-character-set=utf8mb4`.
-
-### Развертывание на хостинге
-1. Создайте MySQL/MariaDB базу данных в панели хостинга.
-2. Создайте пользователя БД и выдайте права только на эту базу.
-3. Загрузите все файлы проекта на хостинг.
-4. Если панель позволяет, укажите document root домена на `public/`.
-5. Если document root изменить нельзя, загрузите проект в web root и оставьте включенным корневой `.htaccess`.
-6. Скопируйте `.env.example` в `.env`.
-7. Укажите production-настройки:
-   ```env
-   APP_ENV=production
-   APP_DEBUG=false
-   APP_URL=https://your-domain.kz
-   DB_HOST=localhost
-   DB_PORT=3306
-   DB_DATABASE=your_database
-   DB_USERNAME=your_user
-   DB_PASSWORD=your_strong_password
-   ```
-8. Импортируйте `database/schema.sql`.
-9. Импортируйте `database/seed.sql`.
-10. Не импортируйте `database/demo.sql` в production.
-11. Проверьте права записи для `storage/logs` и `storage/cache`, если позже будут включены логи/кэш.
-12. Включите HTTPS/SSL.
-13. Проверьте главную, регистрацию, вход, публикацию проекта, поиск, отправку предложения и редактирование профиля.
-14. Удалите временные файлы, SQL-дампы и служебные архивы из публичной зоны хостинга.
-
-### Рекомендации по масштабированию
-- Добавить admin-модерацию пользователей, проектов, откликов и категорий.
-- Добавить личные сообщения между заказчиком и исполнителем.
-- Добавить workflow статусов проекта и milestone-оплату.
-- Добавить приватные загрузки файлов с валидацией и проверкой.
-- Добавить email-уведомления, rate limiting и audit logs.
-- Добавить автоматические тесты и CI.
-- Улучшить релевантность поиска через FULLTEXT или отдельный search service.
+### Автор
 
 Автор: Beck Sarbassov  
 Дата создания: 2026-06-16  

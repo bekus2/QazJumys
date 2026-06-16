@@ -1,5 +1,69 @@
 # Codex_History.md
 
+## 2026-06-16 — v1.2.0
+
+### Краткое
+Добавлен рабочий owner/admin контур, единая модель аккаунта, полный процесс отклика и выполнения работы, сообщения, защищенные файлы, уведомления, жалобы, automated tests и GitHub Actions CI.
+
+### Измененные файлы
+- `app/Core/Auth.php`
+- `app/Core/Upload.php`
+- `app/Repositories/ProjectRepository.php`
+- `app/Repositories/UserRepository.php`
+- `app/Repositories/NotificationRepository.php`
+- `app/Repositories/MessageRepository.php`
+- `app/Repositories/FileRepository.php`
+- `app/Repositories/ComplaintRepository.php`
+- `app/Repositories/OwnerRepository.php`
+- `app/Views/dashboard.php`
+- `app/Views/projects.php`
+- `app/Views/profile.php`
+- `public/ajax.php`
+- `public/index.php`
+- `public/owner.php`
+- `public/download.php`
+- `public/assets/css/style.css`
+- `public/assets/js/app.js`
+- `database/schema.sql`
+- `database/seed.sql`
+- `database/demo.sql`
+- `database/upgrade_1_2_0.sql`
+- `tests/run.php`
+- `.github/workflows/ci.yml`
+- `README.md`
+- `HANDOFF.md`
+- `PROJECT_CONTEXT.md`
+- `TASK.md`
+- `AI_RULES.md`
+
+### Добавлено
+- `owner.php` с общей статистикой, пользователями, жалобами, проектами, email log и audit log.
+- Блокировка/разблокировка пользователей и owner-сброс пароля.
+- Единый аккаунт `member`: один пользователь может публиковать проекты и отправлять отклики.
+- Workflow проекта: `open -> in_progress -> submitted -> completed`.
+- Прием и отклонение откликов.
+- Сообщения между участниками проекта.
+- Защищенная загрузка и скачивание файлов через `storage/uploads` и `download.php`.
+- Жалобы пользователей и owner-модерация.
+- Уведомления в БД и журнал email-отправок.
+- `tests/run.php` и GitHub Actions CI.
+
+### Исправлено
+- Убрана жесткая зависимость действий от ролей client/freelancer.
+- Для native PDO prepares исправлены повторяющиеся named placeholders в новых запросах.
+- Демо-данные обновлены под owner, unified accounts, workflow, сообщения и жалобы.
+
+### Безопасность
+- Owner-действия требуют owner-сессию.
+- Заблокированные аккаунты не могут входить.
+- Загрузки проверяются по MIME и размеру.
+- Файлы не лежат в публичной директории и отдаются только после проверки доступа.
+- Сохранены CSRF, prepared statements, `password_hash()` и output escaping.
+
+### Примечания
+- Самостоятельная смена пароля и полноценный SMTP-провайдер еще требуют отдельной доработки.
+- Платежи/escrow и расширенный dispute workflow не входят в v1.2.0.
+
 ## 2026-06-16 — v1.1.0
 
 ### Краткое
@@ -98,3 +162,8 @@
 
 ### Примечания
 - Следующие версии должны добавить admin panel, notifications, messaging, file uploads, rate limiting and tests.
+
+Автор: Beck Sarbassov
+Дата создания: 2026-06-16
+Последнее обновление: 2026-06-16
+Авторские права: © Beck Sarbassov. Все права защищены.

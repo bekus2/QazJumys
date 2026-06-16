@@ -1,109 +1,73 @@
 # PROJECT_CONTEXT.md
 
+Project: QazJumys
+Version: 1.2.0
+Author: Beck Sarbassov
+Last updated: 2026-06-16
+
 ## Goal
-Build a usable Kazakhstan-focused freelance marketplace for digital services. QazJumys connects clients with freelancers in focused categories such as SMM, advertising, websites, SEO, CRM, 1C, UI/UX, graphic design, video, and motion.
+
+QazJumys is a Kazakhstan-focused freelance marketplace for digital services: SMM, ads, websites, SEO, CRM, 1C, design, video, and related work.
 
 ## Business Logic
-The marketplace has two user roles:
-- Client: publishes projects and receives proposals.
-- Freelancer: browses open projects and sends proposals.
 
-Each project belongs to one category and includes a title, description, project type, experience level, skills, location, remote flag, featured flag, urgent flag, budget range, deadline, and status. Each freelancer can submit only one proposal per project.
+A normal `member` account can act in both directions without switching roles:
 
-## Target Users
-- Kazakhstan entrepreneurs and small businesses that need digital work.
-- Freelancers and agencies offering digital services.
-- Future admin/moderator role for quality control and dispute review.
+- Publish a project as a customer.
+- Browse open projects and submit proposals as a performer.
+- Accept proposals on owned projects.
+- Submit delivery when assigned.
+- Complete work when the project owner accepts it.
 
-## Core Features in v1.1.0
-- Public Kazakh homepage with marketplace counters.
-- Ten fixed service categories.
-- Featured and urgent project presentation.
-- Client and freelancer registration.
-- Secure login/logout.
-- Client project publishing with rich brief fields.
-- Project list with keyword, category, type, level, budget, and sort filters.
-- Freelancer proposal form.
-- Role-based dashboard.
-- Profile editing with headline, skills, city, and freelancer hourly rate.
-- Production-safe category seed and optional local demo data.
+The `owner` role is only for platform administration in `public/owner.php`.
 
-## Technical Decisions
-- Plain PHP was chosen to keep deployment simple on shared hosting.
-- MySQL/MariaDB stores users, categories, projects, and proposals.
-- PDO prepared statements are used for SQL safety.
-- Public web root is isolated in `public/`.
-- AJAX is used for state-changing forms.
-- No frontend framework is used; CSS and JS are local project assets.
-- `database/demo.sql` is separated from `database/seed.sql` to avoid production demo accounts.
+## Main Workflow
 
-## Architecture Overview
-```text
-Browser
-  -> public/index.php for pages
-  -> public/ajax.php for POST actions
-  -> app/Core for security and helpers
-  -> app/Repositories for SQL
-  -> MySQL/MariaDB
-```
+1. Member publishes project with category, budget, skills, deadline, and brief.
+2. Other members submit proposals.
+3. Project owner accepts one proposal; project becomes `in_progress`.
+4. Accepted performer can message, upload delivery files, and submit delivery.
+5. Project owner reviews and completes the project.
+6. Completion updates proposal status and performer counters.
+7. Complaints can be submitted to owner moderation.
+
+## Architecture
+
+- Front controller: `public/index.php`.
+- AJAX actions: `public/ajax.php`.
+- Owner panel: `public/owner.php`.
+- Protected downloads: `public/download.php`.
+- Repositories isolate SQL logic.
+- Views are plain PHP templates.
+- Files are stored in `storage/uploads`, not in `public`.
 
 ## Data Flow
-1. User opens a page through `public/index.php`.
-2. The front controller loads config, session, categories, marketplace stats, projects, and role-specific data.
-3. Forms submit to `public/ajax.php` using jQuery AJAX.
-4. AJAX endpoint validates CSRF, role, and input.
-5. Repositories write or read MySQL using prepared statements.
-6. JSON response returns success/error and optional redirect.
 
-## Marketplace Search Logic
-Project search supports:
-- Keyword query over title, description, and skills.
-- Category filter.
-- Project type: fixed or hourly.
-- Experience level: entry, intermediate, expert.
-- Minimum and maximum budget range.
-- Sort by recommended/latest, high budget, low budget, closest deadline, or fewest proposals.
+Browser forms include CSRF tokens. `ajax.php` validates token, session, account status, input, and business permissions. Repositories perform prepared SQL queries. Notifications are saved in `notifications`; optional emails are logged in `email_logs`.
 
 ## Security Logic
-- Passwords are hashed with `password_hash()`.
-- Authentication uses PHP sessions with HttpOnly cookies and SameSite=Lax.
-- CSRF tokens are required for state-changing AJAX actions.
-- SQL uses prepared statements.
-- User output is escaped through `e()`.
-- `.env` is ignored by Git.
-- `database/demo.sql` must not be imported into production unless demo accounts are immediately removed.
-- SQL import must use `utf8mb4` to protect Kazakh/Russian text.
 
-## Admin Panel Logic
-Version 1.1.0 does not include an admin panel. Future admin work should be added as a separate module with its own role, routes, CSRF checks, moderation permissions, password-change flow, and audit logs.
+- Passwords are hashed.
+- Sessions use HTTP-only cookies and SameSite=Lax.
+- CSRF is required for POST actions.
+- Blocked accounts cannot log in.
+- Owner actions require `role=owner`.
+- Uploads are MIME/size checked.
+- Files download only through access-checked `download.php`.
 
-## API Logic
-Internal AJAX actions:
-- `register`
-- `login`
-- `logout`
-- `project_create`
-- `proposal_create`
-- `profile_update`
+## Owner Panel Logic
 
-No public REST API is included in version 1.1.0.
+Owner can see detailed statistics, users, complaints, projects, email logs, and audit logs. Owner can block/unblock users, reset passwords, update complaint status, and change project status for moderation.
 
-## Storage Logic
-MySQL/MariaDB is required for persistent data. JSON storage is not used for application data.
+## Database
 
-SQL files:
-- `database/schema.sql` for new installs.
-- `database/seed.sql` for production-safe categories.
-- `database/demo.sql` for local preview data.
-- `database/upgrade_1_1_0.sql` for upgrading a v1.0.0 database.
+The schema includes `users`, `categories`, `projects`, `proposals`, `messages`, `project_files`, `complaints`, `notifications`, `email_logs`, and `audit_logs`.
 
-## Important Limitations
-- No email sending yet.
-- No admin moderation yet.
-- No private messaging yet.
-- No file upload yet.
-- No payment, escrow, or dispute logic yet.
-- No automated tests or CI yet.
+## Limitations
 
-## Development Direction
-Next versions should add admin moderation, messaging, notifications, accepted-proposal workflow, project milestones, file uploads, rate limiting, tests, CI, backups, production logging, and search relevance improvements.
+Payments, escrow, full SMTP provider integration, self-service password change, and review moderation are not complete yet. They are documented as future development tasks.
+
+Автор: Beck Sarbassov
+Дата создания: 2026-06-16
+Последнее обновление: 2026-06-16
+Авторские права: © Beck Sarbassov. Все права защищены.

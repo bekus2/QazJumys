@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: auth-login.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Login page for existing portal users.
- * RU: Страница входа для существующих пользователей портала.
+ * EN: Login page for members and owner accounts.
+ * RU: Страница входа для участников и owner-аккаунтов.
  */
 ?>
 <section class="auth-section">

@@ -1,169 +1,85 @@
 # TASK.md
 
-## Project Goal
-Create and maintain QazJumys, a Kazakhstan-focused freelance marketplace for narrow digital specializations, with the public interface fully in Kazakh.
+Project: QazJumys
+Current version: 1.2.0
+Author: Beck Sarbassov
+Last updated: 2026-06-16
 
-## Current Version
-1.1.0
+## Objective
+
+Deliver a working PHP freelance marketplace with unified accounts, owner administration, messaging, uploads, notifications, complaints, and automated tests/CI.
 
 ## Required Functionality
-- Public homepage with marketplace positioning and counters.
-- Ten visible service categories.
-- Featured/urgent project presentation.
-- Client registration.
-- Freelancer registration.
-- Login and logout.
-- Client dashboard.
-- Freelancer dashboard.
-- Client project publishing with rich project brief.
-- Project search by keyword, category, type, experience level, budget, and sort order.
-- Freelancer proposal submission.
-- Profile editing with headline, city, bio, skills, and freelancer hourly rate.
-- Production-safe SQL seed and optional local demo SQL seed.
+
+- Public homepage and searchable project marketplace.
+- Member registration/login.
+- Unified account: one member can publish projects and submit proposals.
+- Project creation and project dashboard.
+- Proposal submission, acceptance, decline.
+- Workflow: open, in progress, submitted, completed, cancelled.
+- Participant messaging.
+- Protected file upload/download.
+- Complaint creation and owner moderation.
+- Notification records and email logs.
+- Owner panel at `public/owner.php`.
+- Automated test runner and GitHub Actions CI.
 
 ## Pages and Modules
-- Homepage
-- Registration
-- Login
-- Projects list and filters
-- Project create page
-- Dashboard
-- Profile
-- AJAX actions
-- MySQL/MariaDB schema and seed files
+
+- Home: `index.php?page=home`.
+- Projects: `index.php?page=projects`.
+- Register/login.
+- Dashboard.
+- Profile.
+- Project create.
+- Owner panel: `owner.php`.
+- Protected download: `download.php`.
 
 ## User Roles
-- Guest
-- Client
-- Freelancer
 
-## Admin Panel Requirements
-Admin panel is not part of version 1.1.0. Future admin module must include secure login, password change, role separation, CSRF protection, moderation, audit logs, and protected routes.
+- `member`: can publish projects and take jobs.
+- `owner`: can manage platform operations and moderation.
 
-Reserved local credentials for a future admin module:
-- Login: `bek0435@gmail.com`
-- Password: `0123456789+Aa`
+## Admin / Owner Requirements
 
-These credentials are not active in v1.1.0 and must be changed before production use if an admin panel is later added.
-
-## UI Requirements
-- Kazakh language public UI.
-- Responsive mobile, tablet, laptop, and desktop layout.
-- Marketplace-style homepage with real project and freelancer previews when data exists.
-- Clear category cards.
-- Advanced project filter bar.
-- Clear project rows with category, type, level, skills, budget, deadline, client, and proposal count.
-- Clear role selection during registration.
-- Role-specific dashboard.
-- Accessible forms and focus states.
+Owner panel must show statistics, users, project workflow, complaints, email logs, and audit logs. Owner can block/unblock accounts, reset passwords, update complaints, and moderate project statuses.
 
 ## Backend Requirements
-- PHP 8.1+ compatible code.
-- PDO and prepared statements.
-- Session auth.
-- Password hashing.
-- CSRF validation.
+
+- PHP 8.1.
+- PDO prepared statements.
+- CSRF protection.
+- Session authentication.
 - Server-side validation.
-- Clean separation of public and private files.
-- UTF-8/utf8mb4-safe database import and storage.
+- Private storage for uploads.
 
-## API Requirements
-Internal AJAX endpoint: `public/ajax.php`.
+## Database Requirements
 
-Actions:
-- `register`
-- `login`
-- `logout`
-- `project_create`
-- `proposal_create`
-- `profile_update`
+Use MySQL/MariaDB with `utf8mb4_unicode_ci`. Required tables are defined in `database/schema.sql`. Use `database/upgrade_1_2_0.sql` for upgrading from v1.1.0.
 
-## Data Storage Requirements
-MySQL/MariaDB tables:
-- `users`
-- `categories`
-- `projects`
-- `proposals`
+## Email / Notifications
 
-`projects` must support:
-- category
-- client
-- title
-- description
-- project type
-- experience level
-- skills
-- location
-- remote flag
-- featured flag
-- urgent flag
-- budget range
-- deadline days
-- status
+Notifications are stored in the database. Email attempts are logged in `email_logs`. Set `MAIL_ENABLED=true` only after the hosting mail setup is confirmed.
 
-SQL files:
-- `database/schema.sql`
-- `database/seed.sql`
-- `database/demo.sql`
-- `database/upgrade_1_1_0.sql`
+## SEO and Performance
 
-## Form Requirements
-- Registration form.
-- Login form.
-- Project creation form.
-- Proposal form.
-- Profile update form.
-- AJAX success/error feedback.
-- CSRF token on every state-changing action.
-- Client-side budget range check plus server-side validation.
-
-## Email and Notification Requirements
-Email notifications are not implemented in version 1.1.0. Default future notification email: `bek0435@gmail.com`.
-
-## SEO Requirements
-- Semantic HTML.
-- Unique page title and description.
-- Open Graph title and description.
-- Public content indexable.
-- Clean public root configuration.
-
-## Performance Requirements
-- Local jQuery file.
-- Optimized single CSS and JS app files.
-- Responsive image loading for hero asset.
-- No unnecessary frontend frameworks.
-- Efficient SQL counters through subqueries rather than broad grouped `p.*` queries.
+Public pages use semantic HTML, title/description metadata, Open Graph basics, responsive CSS, and optimized local assets.
 
 ## Security Requirements
-- Do not commit `.env`.
-- Do not store plaintext production passwords.
-- Use HTTPS in production.
-- Escape output.
-- Validate all incoming form data.
-- Protect role-only actions.
-- Do not import `database/demo.sql` into production unless demo users are removed immediately.
-- Keep SQL dumps and temporary files out of public web access.
 
-## Deployment Requirements
-- Preferred document root: `public/`.
-- Fallback shared-hosting route: root `.htaccess` forwards to `public/`.
-- Import `database/schema.sql` and `database/seed.sql`.
-- Configure `.env`.
-- Disable debug in production.
-- Use `--default-character-set=utf8mb4` for SQL imports.
-- Enable HTTPS/SSL.
-- Verify write permissions only where needed.
+Protect `.env`, storage, logs, uploads, SQL dumps, and backups. Never expose secrets in public pages. Keep owner credentials only in private operational documentation/README and change them before production.
 
 ## Acceptance Criteria
-- Site opens locally through OpenServer at `http://localhost:8080/qazjumys/`.
-- Homepage shows marketplace hero, counters, categories, featured projects, and freelancer previews when demo data exists.
-- Project page shows advanced filters and readable project rows.
-- User can register as client.
-- User can register as freelancer.
-- User can log in.
-- Client can publish a project with type, level, skills, budget, location, deadline, and flags.
-- Freelancer can view projects and submit a proposal.
-- Dashboard changes based on role.
-- Profile editing saves headline, city, bio, skills, and freelancer hourly rate.
-- Layout works on mobile and desktop without horizontal overflow.
-- Required documentation exists and reflects the project state.
+
+- `tests/run.php` passes.
+- Main pages return HTTP 200 locally.
+- Owner can log in to `owner.php`.
+- Member can publish project and submit proposal.
+- Project owner can accept proposal and complete work.
+- Performer can upload delivery and submit work.
+- Owner can manage complaints and user status.
+
+Автор: Beck Sarbassov
+Дата создания: 2026-06-16
+Последнее обновление: 2026-06-16
+Авторские права: © Beck Sarbassov. Все права защищены.

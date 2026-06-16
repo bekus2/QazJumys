@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: Auth.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Manages session-based authentication and role checks.
- * RU: Управляет сессионной аутентификацией и проверкой ролей.
+ * EN: Manages session-based authentication, owner checks, and account status.
+ * RU: Управляет сессионной аутентификацией, owner-проверками и статусом аккаунта.
  */
 
 declare(strict_types=1);
@@ -31,9 +31,11 @@ final class Auth
         $_SESSION['user'] = [
             'id' => (int) $user['id'],
             'role' => (string) $user['role'],
+            'status' => (string) ($user['status'] ?? 'active'),
             'name' => (string) $user['name'],
             'email' => (string) $user['email'],
             'city' => (string) ($user['city'] ?? ''),
+            'password_reset_required' => (int) ($user['password_reset_required'] ?? 0),
         ];
     }
 
@@ -69,6 +71,28 @@ final class Auth
     public static function hasRole(string $role): bool
     {
         return self::check() && ($_SESSION['user']['role'] ?? '') === $role;
+    }
+
+    /**
+     * EN: Checks whether the current account can access owner tools.
+     * RU: Проверяет, может ли текущий аккаунт открыть инструменты владельца.
+     *
+     * @return bool
+     */
+    public static function isOwner(): bool
+    {
+        return self::hasRole('owner');
+    }
+
+    /**
+     * EN: Checks whether the active account is blocked.
+     * RU: Проверяет, заблокирован ли текущий аккаунт.
+     *
+     * @return bool
+     */
+    public static function isBlocked(): bool
+    {
+        return self::check() && ($_SESSION['user']['status'] ?? 'active') === 'blocked';
     }
 
     /**

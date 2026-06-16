@@ -1,7 +1,14 @@
 # AI_RULES.md
 
-## Files to Read Before Changes
-Before editing code, AI agents must read:
+Project: QazJumys
+Version: 1.2.0
+Author: Beck Sarbassov
+Last updated: 2026-06-16
+
+## Read Before Editing
+
+Before code changes, read:
+
 - `README.md`
 - `HANDOFF.md`
 - `PROJECT_CONTEXT.md`
@@ -10,38 +17,33 @@ Before editing code, AI agents must read:
 - `AI_RULES.md`
 
 ## Architecture Rules
-- Keep `public/` as the only intended web-accessible root.
-- Keep PHP application logic in `app/`.
-- Keep SQL files in `database/`.
-- Use repositories for database access.
-- Use `public/ajax.php` only for AJAX state changes.
-- Do not introduce a framework without explicit approval.
-- Keep production-safe data in `database/seed.sql`.
-- Keep local preview/demo accounts in `database/demo.sql`.
 
-## Coding Style Rules
-- Keep source files documented with project headers.
-- Add short useful comments for important logic in English and Russian.
-- Keep public UI text in Kazakh unless documentation requires another language.
-- Use readable PHP 8.1+ syntax.
-- Use semantic HTML.
-- Keep CSS responsive and maintainable.
-- Do not use viewport-scaled font sizes.
-- Keep card radius at 8px or less.
+- Keep plain PHP architecture unless a new framework is explicitly approved.
+- Keep public entry points in `public`.
+- Keep private logic in `app`.
+- Keep uploads in `storage/uploads`.
+- Keep database access inside repositories.
+
+## Coding Rules
+
+- Maintain professional file headers.
+- Use prepared statements for SQL.
+- Validate server-side input.
+- Escape HTML output with `e()`.
+- Keep comments useful and brief.
 
 ## Security Rules
-- Never commit `.env`, real secrets, API keys, SMTP passwords, or tokens.
-- Never store plaintext production passwords.
-- Use `password_hash()` and `password_verify()`.
-- Use CSRF validation for state-changing requests.
-- Use prepared statements for SQL.
-- Escape output with `e()`.
-- Keep private folders out of direct public access.
-- Do not import `database/demo.sql` into production unless demo accounts are removed immediately.
-- Use `--default-character-set=utf8mb4` when importing SQL.
+
+- Never commit `.env` or real secrets.
+- Keep owner-only actions behind `Auth::isOwner()`.
+- Keep CSRF on all state-changing POST actions.
+- Do not allow direct public upload access.
+- Do not store plaintext passwords.
 
 ## Documentation Rules
-When changing behavior, update the relevant sections of:
+
+When behavior changes, update the relevant sections in:
+
 - `README.md`
 - `HANDOFF.md`
 - `PROJECT_CONTEXT.md`
@@ -49,46 +51,35 @@ When changing behavior, update the relevant sections of:
 - `TASK.md`
 - `AI_RULES.md`
 
-Do not rewrite all documentation unless the architecture or project state changes enough to require it.
+## Git/GitHub Workflow
 
-## Prohibited Actions
-- Do not copy text, assets, or brand identity from external marketplaces.
-- Do not mention private design references in product files or project docs.
-- Do not delete working code without explaining the reason.
-- Do not change architecture without approval.
-- Do not add unnecessary dependencies.
-- Do not expose default credentials on public pages.
-- Do not mix local demo accounts into production-safe seed data.
+- Work on a feature branch.
+- Run tests before committing.
+- Commit code and docs together.
+- Push branch and merge to `main` only after verification.
 
-## Git and GitHub Workflow
-- Keep `main` stable.
-- Use feature branches for larger future changes.
-- Use clear commit messages.
-- Update docs with code changes.
-- Review affected files and risk before committing.
+## Testing
 
-Recommended branch names:
-- `feature/module-name`
-- `fix/bug-name`
-- `docs/update-name`
-- `refactor/module-name`
-- `security/security-fix-name`
+Run:
 
-## Testing and Verification Rules
-- Run PHP syntax checks for changed PHP files.
-- Verify main pages render.
-- Verify OpenServer local URL when available: `http://localhost:8080/qazjumys/`.
-- Check responsive layout after frontend changes.
-- Validate SQL imports with `utf8mb4` and confirm Kazakh/Russian text is not corrupted.
-- Validate AJAX login or another CSRF-protected action after auth changes.
-- Note any environment limitations in the final report.
+```powershell
+C:\OSPanel\modules\php\PHP_8.1\php.exe tests\run.php
+```
 
-## Required Final Report Format
-After each project update, report:
+Also verify local OpenServer pages after database import.
+
+## Final Report Format
+
+Report:
+
 1. What changed.
-2. Which files changed.
-3. How to install, run, and test.
-4. Security measures added or preserved.
+2. Files changed.
+3. How to run/test.
+4. Security preserved or added.
 5. Documentation updated.
-6. Remaining improvements.
-7. Risks or limitations.
+6. Known limitations.
+
+Автор: Beck Sarbassov
+Дата создания: 2026-06-16
+Последнее обновление: 2026-06-16
+Авторские права: © Beck Sarbassov. Все права защищены.

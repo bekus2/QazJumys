@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: bootstrap.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Boots configuration, sessions, helpers, and class loading.
- * RU: Загружает конфигурацию, сессии, помощники и автозагрузку классов.
+ * EN: Boots configuration, sessions, helpers, class loading, and shared display labels.
+ * RU: Загружает конфигурацию, сессии, помощники, автозагрузку классов и общие подписи.
  */
 
 declare(strict_types=1);
@@ -188,6 +188,62 @@ function experience_level_label(string $level): string
         'expert' => 'Expert',
         default => 'Middle',
     };
+}
+
+/**
+ * EN: Returns a public label for project workflow status.
+ * RU: Возвращает публичную подпись статуса workflow проекта.
+ *
+ * @param string $status Workflow status / Статус workflow
+ * @return string
+ */
+function project_status_label(string $status): string
+{
+    return match ($status) {
+        'in_progress' => 'Жұмыста',
+        'submitted' => 'Тексеруде',
+        'completed' => 'Аяқталды',
+        'cancelled' => 'Тоқтатылды',
+        default => 'Ашық',
+    };
+}
+
+/**
+ * EN: Returns a public label for proposal status.
+ * RU: Возвращает публичную подпись статуса отклика.
+ *
+ * @param string $status Proposal status / Статус отклика
+ * @return string
+ */
+function proposal_status_label(string $status): string
+{
+    return match ($status) {
+        'shortlisted' => 'Таңдауда',
+        'accepted' => 'Қабылданды',
+        'declined' => 'Қабылданбады',
+        'withdrawn' => 'Қайтарылды',
+        'completed' => 'Аяқталды',
+        default => 'Жіберілді',
+    };
+}
+
+/**
+ * EN: Formats bytes for file lists.
+ * RU: Форматирует байты для списков файлов.
+ *
+ * @param mixed $bytes File size / Размер файла
+ * @return string
+ */
+function format_file_size(mixed $bytes): string
+{
+    $size = max(0, (float) $bytes);
+    $units = ['B', 'KB', 'MB', 'GB'];
+
+    for ($i = 0; $size >= 1024 && $i < count($units) - 1; $i++) {
+        $size /= 1024;
+    }
+
+    return number_format($size, $i === 0 ? 0 : 1, '.', ' ') . ' ' . $units[$i];
 }
 
 /**
