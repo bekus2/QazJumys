@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: ajax.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -145,19 +145,47 @@ function handle_project_create(ProjectRepository $projects): never
 
     $title = Validator::text($_POST['title'] ?? '', 180);
     $description = Validator::text($_POST['description'] ?? '', 3000);
+    $projectType = (string) ($_POST['project_type'] ?? 'fixed');
+    $experienceLevel = (string) ($_POST['experience_level'] ?? 'intermediate');
+    $skills = Validator::text($_POST['skills'] ?? '', 500);
+    $location = Validator::text($_POST['location'] ?? '', 80);
+    $isRemote = isset($_POST['is_remote']) ? 1 : 0;
+    $isUrgent = isset($_POST['is_urgent']) ? 1 : 0;
     $budgetMin = Validator::money($_POST['budget_min'] ?? null);
     $budgetMax = Validator::money($_POST['budget_max'] ?? null);
     $deadlineDays = max(1, min(180, (int) ($_POST['deadline_days'] ?? 7)));
     $categoryId = (int) ($_POST['category_id'] ?? 0);
 
-    if ($categoryId <= 0 || mb_strlen($title, 'UTF-8') < 6 || mb_strlen($description, 'UTF-8') < 30 || $budgetMin === null || $budgetMax === null || $budgetMax < $budgetMin) {
-        Response::json(['ok' => false, 'message' => 'Жоба атауы, сипаттамасы, категориясы және бюджеті дұрыс толтырылуы керек.'], 422);
+    if (!in_array($projectType, ['fixed', 'hourly'], true)) {
+        $projectType = 'fixed';
+    }
+
+    if (!in_array($experienceLevel, ['entry', 'intermediate', 'expert'], true)) {
+        $experienceLevel = 'intermediate';
+    }
+
+    if (
+        $categoryId <= 0
+        || mb_strlen($title, 'UTF-8') < 6
+        || mb_strlen($description, 'UTF-8') < 30
+        || mb_strlen($skills, 'UTF-8') < 3
+        || $budgetMin === null
+        || $budgetMax === null
+        || $budgetMax < $budgetMin
+    ) {
+        Response::json(['ok' => false, 'message' => 'Жоба атауы, сипаттамасы, дағдылары, категориясы және бюджеті дұрыс толтырылуы керек.'], 422);
     }
 
     $projects->create((int) $user['id'], [
         'category_id' => $categoryId,
         'title' => $title,
         'description' => $description,
+        'project_type' => $projectType,
+        'experience_level' => $experienceLevel,
+        'skills' => $skills,
+        'location' => $location,
+        'is_remote' => $isRemote,
+        'is_urgent' => $isUrgent,
         'budget_min' => $budgetMin,
         'budget_max' => $budgetMax,
         'deadline_days' => $deadlineDays,
@@ -187,6 +215,10 @@ function handle_proposal_create(ProjectRepository $projects): never
 
     if ($projectId <= 0 || mb_strlen($coverLetter, 'UTF-8') < 20 || $bidAmount === null) {
         Response::json(['ok' => false, 'message' => 'Ұсыныс мәтіні, баға және мерзім қажет.'], 422);
+    }
+
+    if (!$projects->isOpen($projectId)) {
+        Response::json(['ok' => false, 'message' => 'Бұл жобаға ұсыныс қабылданбайды немесе жоба табылмады.'], 404);
     }
 
     if ($projects->hasProposal($projectId, (int) $user['id'])) {
@@ -219,8 +251,10 @@ function handle_profile_update(UserRepository $users): never
     $updated = $users->updateProfile((int) $user['id'], [
         'name' => Validator::text($_POST['name'] ?? '', 120),
         'city' => Validator::text($_POST['city'] ?? '', 80),
+        'headline' => Validator::text($_POST['headline'] ?? '', 160),
         'bio' => Validator::text($_POST['bio'] ?? '', 1200),
         'skills' => Validator::text($_POST['skills'] ?? '', 600),
+        'hourly_rate' => Validator::money($_POST['hourly_rate'] ?? null),
     ]);
 
     if ($updated) {

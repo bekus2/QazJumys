@@ -3,7 +3,7 @@
  * Project: QazJumys
  * File: auth-register.php
  * Author: Beck Sarbassov
- * Version: 1.0.0
+ * Version: 1.1.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
@@ -16,8 +16,13 @@
     <div class="container auth-grid">
         <div class="auth-copy">
             <span class="eyebrow">Аккаунт ашу</span>
-            <h1>Рөлді таңдап, жеке кабинетке кіріңіз</h1>
-            <p>Тапсырыс беруші жоба жариялайды. Орындаушы ашық жобаларға ұсыныс жібереді.</p>
+            <h1>QazJumys аккаунтын ашу</h1>
+            <p>Тапсырыс беруші жобаны жариялайды, орындаушы бюджет пен мерзімі бар ұсыныс жібереді.</p>
+            <div class="auth-points">
+                <span>CSRF қорғаныс</span>
+                <span>Рөл бойынша кабинет</span>
+                <span>Жобалар мен ұсыныстар</span>
+            </div>
         </div>
         <form class="panel form js-ajax-form" action="ajax.php" method="post" data-success-redirect="<?= e(url_for('dashboard')) ?>">
             <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
