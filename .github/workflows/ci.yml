@@ -1,0 +1,37 @@
+# Project: QazJumys
+# File: ci.yml
+# Author: Beck Sarbassov
+# Version: 1.2.0
+# Release Date: 2026-06-16
+# Last Updated: 2026-06-16
+# Copyright: © Beck Sarbassov. All rights reserved.
+#
+# EN: GitHub Actions workflow for PHP syntax and project integrity checks.
+# RU: GitHub Actions workflow для проверки PHP-синтаксиса и целостности проекта.
+
+name: QazJumys CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  php-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.1"
+          extensions: pdo, pdo_mysql, mbstring, fileinfo
+
+      - name: Run project checks
+        run: php tests/run.php

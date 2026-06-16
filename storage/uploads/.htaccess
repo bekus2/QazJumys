@@ -1,0 +1,12 @@
+# Project: QazJumys
+# File: storage/uploads/.htaccess
+# Author: Beck Sarbassov
+# Version: 1.2.0
+# Release Date: 2026-06-16
+# Last Updated: 2026-06-16
+# Copyright: © Beck Sarbassov. All rights reserved.
+#
+# EN: Defense-in-depth rule if storage is ever exposed by a misconfigured host.
+# RU: Дополнительная защита, если storage случайно станет публичным.
+
+Require all denied

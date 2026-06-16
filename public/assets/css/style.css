@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: style.css
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Main responsive CSS for the production-ready marketplace interface.
- * RU: Основной адаптивный CSS для готового интерфейса маркетплейса.
+ * EN: Main responsive CSS for the production-ready marketplace, workflow dashboard, and owner panel.
+ * RU: Основной адаптивный CSS для готового маркетплейса, workflow-кабинета и owner-панели.
  */
 
 :root {
@@ -538,6 +538,15 @@ p {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.stat-grid-wide,
+.owner-stat-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.owner-stat-grid .stat-wide {
+    grid-column: span 2;
+}
+
 .category-card,
 .project-card,
 .talent-card,
@@ -1028,6 +1037,212 @@ p {
     font-size: 20px;
 }
 
+.workflow-card {
+    display: grid;
+    gap: 12px;
+}
+
+.workflow-steps {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.workflow-steps span {
+    min-height: 30px;
+    padding: 7px 8px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--muted);
+    background: #fff;
+    font-size: 12px;
+    font-weight: 900;
+    text-align: center;
+}
+
+.workflow-steps .is-current {
+    border-color: var(--primary);
+    color: var(--primary-dark);
+    background: #e6f2ff;
+}
+
+.workflow-steps .is-done {
+    border-color: rgba(15, 159, 110, .28);
+    color: var(--green);
+    background: #e9fbf4;
+}
+
+.action-stack,
+.owner-actions {
+    display: grid;
+    gap: 8px;
+}
+
+.inline-form {
+    margin: 0;
+}
+
+.upload-inline,
+.message-inline {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+}
+
+.message-inline {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+}
+
+.message-inline label {
+    min-width: 0;
+}
+
+.dashboard-ops-grid,
+.owner-grid {
+    display: grid;
+    gap: 18px;
+    align-items: start;
+}
+
+.dashboard-ops-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.owner-grid {
+    grid-template-columns: minmax(0, 1.45fr) minmax(340px, .8fr);
+}
+
+.owner-panel-wide {
+    grid-column: 1 / -1;
+}
+
+.mini-list,
+.owner-stack {
+    display: grid;
+    gap: 12px;
+}
+
+.mini-list > div,
+.owner-item {
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+}
+
+.mini-list strong,
+.mini-list span {
+    display: block;
+}
+
+.mini-list p {
+    margin: 6px 0;
+}
+
+.mini-list span,
+.compact-list span {
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.mini-list .is-unread {
+    border-color: rgba(11, 134, 255, .34);
+    background: #eef7ff;
+}
+
+.owner-body {
+    background: #f5f7fb;
+}
+
+.owner-header .brand-mark {
+    background: linear-gradient(135deg, #0b86ff, #0f9f6e);
+}
+
+.owner-nav {
+    display: flex;
+    flex-wrap: wrap;
+}
+
+.owner-hero {
+    background: linear-gradient(180deg, #edf7ff, #f5f7fb);
+}
+
+.owner-panel .section-heading {
+    margin-bottom: 18px;
+}
+
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.owner-table {
+    width: 100%;
+    min-width: 780px;
+    border-collapse: collapse;
+}
+
+.owner-table th,
+.owner-table td {
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    vertical-align: top;
+}
+
+.owner-table th {
+    color: var(--muted);
+    background: #f2f6fb;
+    font-size: 13px;
+    font-weight: 900;
+}
+
+.owner-table td > span,
+.owner-table td strong + span {
+    display: block;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.status-pill {
+    display: inline-flex;
+    min-height: 26px;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 900;
+}
+
+.status-active {
+    color: var(--green);
+    background: #e9fbf4;
+}
+
+.status-blocked {
+    color: var(--danger);
+    background: #ffefed;
+}
+
+.owner-inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 0;
+}
+
+.owner-inline-form input,
+.owner-inline-form select {
+    min-height: 38px;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: #fff;
+}
+
 .empty-state {
     grid-column: 1 / -1;
     padding: 34px;
@@ -1112,7 +1327,9 @@ p {
     }
 
     .project-grid,
-    .talent-grid {
+    .talent-grid,
+    .stat-grid-wide,
+    .owner-stat-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -1124,8 +1341,15 @@ p {
         grid-column: span 3;
     }
 
-    .project-row {
+    .project-row,
+    .dashboard-ops-grid,
+    .owner-grid {
         grid-template-columns: 1fr;
+    }
+
+    .owner-panel-wide,
+    .owner-stat-grid .stat-wide {
+        grid-column: auto;
     }
 
     .proposal-box {
@@ -1159,6 +1383,16 @@ p {
     .site-nav.is-open {
         display: grid;
         gap: 4px;
+    }
+
+    .owner-nav {
+        position: static;
+        display: flex;
+        width: auto;
+        padding: 0;
+        border: 0;
+        box-shadow: none;
+        background: transparent;
     }
 
     .site-nav a,
@@ -1273,6 +1507,8 @@ p {
     .project-grid,
     .talent-grid,
     .stat-grid,
+    .stat-grid-wide,
+    .owner-stat-grid,
     .two-cols,
     .three-cols,
     .check-row,
@@ -1300,5 +1536,15 @@ p {
 
     .proposal-summary {
         justify-items: start;
+    }
+
+    .message-inline,
+    .owner-inline-form {
+        grid-template-columns: 1fr;
+    }
+
+    .owner-inline-form input,
+    .owner-inline-form select {
+        width: 100%;
     }
 }

@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: project-create.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Rich project publishing form for client accounts.
- * RU: Расширенная форма публикации проекта для аккаунтов заказчика.
+ * EN: Rich project publishing form for unified member accounts.
+ * RU: Расширенная форма публикации проекта для единых аккаунтов участников.
  */
 ?>
 <section class="page-hero">
@@ -17,7 +17,7 @@
         <div>
             <span class="eyebrow">Жаңа жоба</span>
             <h1>Тапсырманы толық жариялау</h1>
-            <p>Категория, бюджет, дағды, локация және мерзім дұрыс толса, орындаушы ұсынысы да нақты болады.</p>
+            <p>Категория, бюджет, дағды, локация және мерзім дұрыс толса, орындаушылардың ұсынысы да нақты болады.</p>
         </div>
         <div class="page-stat">
             <strong>5</strong>
@@ -31,7 +31,7 @@
         <aside class="side-note">
             <span class="eyebrow">Project brief</span>
             <h2>Жақсы brief уақытты үнемдейді</h2>
-            <p>Бірінші нұсқада файл жүктеу мен төлем жүйесі жоқ, сондықтан міндетті мәтін, нәтиже, бюджет және мерзім анық жазылуы керек.</p>
+            <p>Жариялағаннан кейін файлдарды кабинеттен тіркеп, келген откликтерді қабылдап, жұмыс барысын аяқталуға дейін жүргізе аласыз.</p>
         </aside>
         <form class="panel form js-ajax-form" action="ajax.php" method="post" data-success-redirect="<?= e(url_for('dashboard')) ?>">
             <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">

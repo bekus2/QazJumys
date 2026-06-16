@@ -1,8 +1,11 @@
 .env
 /storage/logs/*.log
 /storage/cache/*
+/storage/uploads/*
 !/storage/cache/.gitkeep
 !/storage/logs/.gitkeep
+!/storage/uploads/.gitkeep
+!/storage/uploads/.htaccess
 /vendor/
 /.idea/
 /.vscode/

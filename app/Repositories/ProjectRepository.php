@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: ProjectRepository.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Stores projects, proposal bids, dashboard counters, and marketplace discovery data.
- * RU: Хранит проекты, отклики, показатели кабинета и данные поиска маркетплейса.
+ * EN: Stores projects, proposal bids, workflow transitions, dashboard counters, and marketplace discovery data.
+ * RU: Хранит проекты, отклики, переходы workflow, показатели кабинета и данные поиска маркетплейса.
  */
 
 declare(strict_types=1);
@@ -17,6 +17,7 @@ declare(strict_types=1);
 namespace QazJumys\Repositories;
 
 use PDO;
+use RuntimeException;
 
 final class ProjectRepository
 {
@@ -84,8 +85,10 @@ final class ProjectRepository
         }
 
         if (!empty($filters['q'])) {
-            $where[] = '(p.title LIKE :query OR p.description LIKE :query OR p.skills LIKE :query)';
-            $params['query'] = '%' . $filters['q'] . '%';
+            $where[] = '(p.title LIKE :query_title OR p.description LIKE :query_description OR p.skills LIKE :query_skills)';
+            $params['query_title'] = '%' . $filters['q'] . '%';
+            $params['query_description'] = '%' . $filters['q'] . '%';
+            $params['query_skills'] = '%' . $filters['q'] . '%';
         }
 
         if (!empty($filters['project_type']) && in_array($filters['project_type'], ['fixed', 'hourly'], true)) {
@@ -116,21 +119,21 @@ final class ProjectRepository
             default => 'p.is_featured DESC, p.is_urgent DESC, p.created_at DESC',
         };
 
-        $sql = $this->projectSelect() . '
-                WHERE ' . implode(' AND ', $where) . '
-                ORDER BY ' . $orderBy;
-
-        $statement = $this->pdo->prepare($sql);
+        $statement = $this->pdo->prepare(
+            $this->projectSelect() . '
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY ' . $orderBy
+        );
         $statement->execute($params);
 
         return $statement->fetchAll();
     }
 
     /**
-     * EN: Creates a client project after validation.
-     * RU: Создает проект заказчика после проверки данных.
+     * EN: Creates a new marketplace project for any active member account.
+     * RU: Создает новый проект маркетплейса для любого активного аккаунта участника.
      *
-     * @param int $clientId Client user id / ID заказчика
+     * @param int $clientId Publisher user id / ID автора проекта
      * @param array<string, mixed> $data Project data / Данные проекта
      * @return int
      */
@@ -167,10 +170,26 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Returns projects owned by a client with proposal counters.
-     * RU: Возвращает проекты заказчика со счетчиками откликов.
+     * EN: Returns one project with owner, assignee, category, and proposal counters.
+     * RU: Возвращает проект с автором, исполнителем, категорией и счетчиками откликов.
      *
-     * @param int $clientId Client user id / ID заказчика
+     * @param int $projectId Project id / ID проекта
+     * @return array<string, mixed>|null
+     */
+    public function findProject(int $projectId): ?array
+    {
+        $statement = $this->pdo->prepare($this->projectSelect() . ' WHERE p.id = :id LIMIT 1');
+        $statement->execute(['id' => $projectId]);
+        $project = $statement->fetch();
+
+        return $project ?: null;
+    }
+
+    /**
+     * EN: Returns projects published by the user.
+     * RU: Возвращает проекты, опубликованные пользователем.
+     *
+     * @param int $clientId Publisher user id / ID автора
      * @return array<int, array<string, mixed>>
      */
     public function byClient(int $clientId): array
@@ -178,7 +197,7 @@ final class ProjectRepository
         $statement = $this->pdo->prepare(
             $this->projectSelect() . '
              WHERE p.client_id = :client_id
-             ORDER BY p.created_at DESC'
+             ORDER BY p.updated_at DESC'
         );
         $statement->execute(['client_id' => $clientId]);
 
@@ -186,24 +205,25 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Returns proposals submitted by a freelancer with related project context.
-     * RU: Возвращает отклики исполнителя вместе с контекстом проекта.
+     * EN: Returns proposals submitted by the user with project context.
+     * RU: Возвращает отклики пользователя вместе с контекстом проекта.
      *
-     * @param int $freelancerId Freelancer user id / ID исполнителя
+     * @param int $freelancerId User id / ID пользователя
      * @return array<int, array<string, mixed>>
      */
     public function proposalsByFreelancer(int $freelancerId): array
     {
         $statement = $this->pdo->prepare(
-            'SELECT pr.*, p.title AS project_title, p.status AS project_status, p.project_type,
-                    p.experience_level, p.budget_min, p.budget_max, c.name AS category_name,
-                    u.name AS client_name
+            'SELECT pr.*, p.title AS project_title, p.status AS project_status, p.client_id,
+                    p.project_type, p.experience_level, p.budget_min, p.budget_max,
+                    p.assigned_freelancer_id, p.accepted_proposal_id, c.name AS category_name,
+                    u.name AS client_name, u.email AS client_email
              FROM proposals pr
              INNER JOIN projects p ON p.id = pr.project_id
              INNER JOIN categories c ON c.id = p.category_id
              INNER JOIN users u ON u.id = p.client_id
              WHERE pr.freelancer_id = :freelancer_id
-             ORDER BY pr.created_at DESC'
+             ORDER BY pr.updated_at DESC, pr.created_at DESC'
         );
         $statement->execute(['freelancer_id' => $freelancerId]);
 
@@ -211,8 +231,33 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Checks whether a project can still receive freelancer proposals.
-     * RU: Проверяет, может ли проект принимать отклики исполнителей.
+     * EN: Returns proposals received on projects published by the user.
+     * RU: Возвращает отклики, полученные на проекты пользователя.
+     *
+     * @param int $clientId Publisher user id / ID автора проектов
+     * @return array<int, array<string, mixed>>
+     */
+    public function proposalsForClient(int $clientId): array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT pr.*, p.title AS project_title, p.status AS project_status, p.client_id,
+                    u.name AS freelancer_name, u.email AS freelancer_email, u.city AS freelancer_city,
+                    u.headline AS freelancer_headline, u.rating AS freelancer_rating,
+                    u.completed_projects AS freelancer_completed_projects
+             FROM proposals pr
+             INNER JOIN projects p ON p.id = pr.project_id
+             INNER JOIN users u ON u.id = pr.freelancer_id
+             WHERE p.client_id = :client_id
+             ORDER BY pr.status = "accepted" DESC, pr.updated_at DESC, pr.created_at DESC'
+        );
+        $statement->execute(['client_id' => $clientId]);
+
+        return $statement->fetchAll();
+    }
+
+    /**
+     * EN: Checks whether a project can still receive proposals.
+     * RU: Проверяет, может ли проект принимать отклики.
      *
      * @param int $projectId Project id / ID проекта
      * @return bool
@@ -226,16 +271,70 @@ final class ProjectRepository
     }
 
     /**
+     * EN: Checks whether the user published the project.
+     * RU: Проверяет, является ли пользователь автором проекта.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @param int $userId User id / ID пользователя
+     * @return bool
+     */
+    public function isProjectOwner(int $projectId, int $userId): bool
+    {
+        $statement = $this->pdo->prepare('SELECT id FROM projects WHERE id = :project_id AND client_id = :user_id LIMIT 1');
+        $statement->execute(['project_id' => $projectId, 'user_id' => $userId]);
+
+        return (bool) $statement->fetch();
+    }
+
+    /**
+     * EN: Checks whether the user can access project communication and files.
+     * RU: Проверяет доступ пользователя к коммуникациям и файлам проекта.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @param int $userId User id / ID пользователя
+     * @return bool
+     */
+    public function isParticipant(int $projectId, int $userId): bool
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT p.id
+             FROM projects p
+             LEFT JOIN proposals pr ON pr.project_id = p.id AND pr.freelancer_id = :proposal_user_id
+             WHERE p.id = :project_id
+               AND (p.client_id = :client_user_id OR p.assigned_freelancer_id = :assigned_user_id OR pr.id IS NOT NULL)
+             LIMIT 1'
+        );
+        $statement->execute([
+            'project_id' => $projectId,
+            'proposal_user_id' => $userId,
+            'client_user_id' => $userId,
+            'assigned_user_id' => $userId,
+        ]);
+
+        return (bool) $statement->fetch();
+    }
+
+    /**
      * EN: Creates a proposal bid for an open project.
      * RU: Создает отклик на открытый проект.
      *
      * @param int $projectId Project id / ID проекта
-     * @param int $freelancerId Freelancer id / ID исполнителя
+     * @param int $freelancerId User id / ID пользователя
      * @param array<string, mixed> $data Proposal data / Данные отклика
      * @return int
      */
     public function createProposal(int $projectId, int $freelancerId, array $data): int
     {
+        $project = $this->findProject($projectId);
+
+        if (!$project || $project['status'] !== 'open') {
+            throw new RuntimeException('Бұл жобаға ұсыныс қабылданбайды.');
+        }
+
+        if ((int) $project['client_id'] === $freelancerId) {
+            throw new RuntimeException('Өз жобаңызға отклик жіберуге болмайды.');
+        }
+
         $statement = $this->pdo->prepare(
             'INSERT INTO proposals (project_id, freelancer_id, cover_letter, bid_amount, delivery_days, status, created_at, updated_at)
              VALUES (:project_id, :freelancer_id, :cover_letter, :bid_amount, :delivery_days, "sent", NOW(), NOW())'
@@ -253,11 +352,11 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Prevents duplicate freelancer proposals for the same project.
-     * RU: Предотвращает повторные отклики исполнителя на один проект.
+     * EN: Prevents duplicate proposals for the same project.
+     * RU: Предотвращает повторные отклики на один проект.
      *
      * @param int $projectId Project id / ID проекта
-     * @param int $freelancerId Freelancer id / ID исполнителя
+     * @param int $freelancerId User id / ID пользователя
      * @return bool
      */
     public function hasProposal(int $projectId, int $freelancerId): bool
@@ -272,34 +371,232 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Calculates dashboard counters for the authenticated role.
-     * RU: Считает показатели кабинета для текущей роли.
+     * EN: Accepts one proposal and moves the project into active work.
+     * RU: Принимает один отклик и переводит проект в активную работу.
      *
-     * @param int $userId User id / ID пользователя
-     * @param string $role Role key / Ключ роли
-     * @return array<string, int>
+     * @param int $proposalId Proposal id / ID отклика
+     * @param int $clientId Project owner id / ID автора проекта
+     * @return array<string, mixed>
      */
-    public function dashboardStats(int $userId, string $role): array
+    public function acceptProposal(int $proposalId, int $clientId): array
     {
-        if ($role === 'client') {
-            $projectCount = $this->count('SELECT COUNT(*) FROM projects WHERE client_id = :id', $userId);
-            $proposalCount = $this->count(
-                'SELECT COUNT(*) FROM proposals pr INNER JOIN projects p ON p.id = pr.project_id WHERE p.client_id = :id',
-                $userId
-            );
+        $this->pdo->beginTransaction();
 
-            return [
-                'projects' => $projectCount,
-                'proposals' => $proposalCount,
-                'open_market' => $this->countOpenProjects(),
-            ];
+        try {
+            $proposal = $this->proposalWithProjectForUpdate($proposalId);
+
+            if (!$proposal || (int) $proposal['client_id'] !== $clientId) {
+                throw new RuntimeException('Отклик табылмады немесе сізге тиесілі емес.');
+            }
+
+            if (!in_array((string) $proposal['project_status'], ['open', 'in_progress'], true)) {
+                throw new RuntimeException('Бұл жоба бойынша отклик қабылдау мүмкін емес.');
+            }
+
+            $updateProposal = $this->pdo->prepare(
+                'UPDATE proposals
+                 SET status = "accepted", accepted_at = NOW(), updated_at = NOW()
+                 WHERE id = :proposal_id'
+            );
+            $updateProposal->execute(['proposal_id' => $proposalId]);
+
+            $declineOthers = $this->pdo->prepare(
+                'UPDATE proposals
+                 SET status = "declined", declined_at = NOW(), updated_at = NOW()
+                 WHERE project_id = :project_id AND id <> :proposal_id AND status IN ("sent", "shortlisted")'
+            );
+            $declineOthers->execute([
+                'project_id' => (int) $proposal['project_id'],
+                'proposal_id' => $proposalId,
+            ]);
+
+            $updateProject = $this->pdo->prepare(
+                'UPDATE projects
+                 SET status = "in_progress",
+                     accepted_proposal_id = :proposal_id,
+                     assigned_freelancer_id = :freelancer_id,
+                     started_at = COALESCE(started_at, NOW()),
+                     updated_at = NOW()
+                 WHERE id = :project_id'
+            );
+            $updateProject->execute([
+                'proposal_id' => $proposalId,
+                'freelancer_id' => (int) $proposal['freelancer_id'],
+                'project_id' => (int) $proposal['project_id'],
+            ]);
+
+            $this->pdo->commit();
+
+            return $this->findProposal($proposalId) ?? [];
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
+    }
+
+    /**
+     * EN: Declines a proposal without closing the project.
+     * RU: Отклоняет отклик без закрытия проекта.
+     *
+     * @param int $proposalId Proposal id / ID отклика
+     * @param int $clientId Project owner id / ID автора проекта
+     * @return array<string, mixed>
+     */
+    public function declineProposal(int $proposalId, int $clientId): array
+    {
+        $proposal = $this->findProposal($proposalId);
+
+        if (!$proposal || (int) $proposal['client_id'] !== $clientId) {
+            throw new RuntimeException('Отклик табылмады немесе сізге тиесілі емес.');
         }
 
-        $proposalCount = $this->count('SELECT COUNT(*) FROM proposals WHERE freelancer_id = :id', $userId);
+        if ((string) $proposal['status'] === 'accepted') {
+            throw new RuntimeException('Қабылданған откликті жай ғана отклон етуге болмайды.');
+        }
 
+        $statement = $this->pdo->prepare(
+            'UPDATE proposals
+             SET status = "declined", declined_at = NOW(), updated_at = NOW()
+             WHERE id = :proposal_id'
+        );
+        $statement->execute(['proposal_id' => $proposalId]);
+
+        return $this->findProposal($proposalId) ?? [];
+    }
+
+    /**
+     * EN: Marks active work as delivered by the assigned freelancer.
+     * RU: Отмечает активную работу как сданную назначенным исполнителем.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @param int $freelancerId Assigned user id / ID назначенного исполнителя
+     * @return array<string, mixed>
+     */
+    public function submitDelivery(int $projectId, int $freelancerId): array
+    {
+        $statement = $this->pdo->prepare(
+            'UPDATE projects
+             SET status = "submitted", submitted_at = NOW(), updated_at = NOW()
+             WHERE id = :project_id AND assigned_freelancer_id = :freelancer_id AND status = "in_progress"'
+        );
+        $statement->execute([
+            'project_id' => $projectId,
+            'freelancer_id' => $freelancerId,
+        ]);
+
+        if ($statement->rowCount() < 1) {
+            throw new RuntimeException('Жұмысты тапсыру үшін сіз осы жобаның қабылданған орындаушысы болуыңыз керек.');
+        }
+
+        return $this->findProject($projectId) ?? [];
+    }
+
+    /**
+     * EN: Completes delivered work and updates freelancer counters.
+     * RU: Завершает сданную работу и обновляет счетчики исполнителя.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @param int $clientId Project owner id / ID автора проекта
+     * @return array<string, mixed>
+     */
+    public function completeProject(int $projectId, int $clientId): array
+    {
+        $this->pdo->beginTransaction();
+
+        try {
+            $project = $this->findProjectForUpdate($projectId);
+
+            if (!$project || (int) $project['client_id'] !== $clientId) {
+                throw new RuntimeException('Жоба табылмады немесе сізге тиесілі емес.');
+            }
+
+            if (!in_array((string) $project['status'], ['in_progress', 'submitted'], true)) {
+                throw new RuntimeException('Бұл жоба аяқтауға дайын емес.');
+            }
+
+            $projectUpdate = $this->pdo->prepare(
+                'UPDATE projects
+                 SET status = "completed", completed_at = NOW(), updated_at = NOW()
+                 WHERE id = :project_id'
+            );
+            $projectUpdate->execute(['project_id' => $projectId]);
+
+            if (!empty($project['accepted_proposal_id'])) {
+                $proposalUpdate = $this->pdo->prepare(
+                    'UPDATE proposals
+                     SET status = "completed", completed_at = NOW(), updated_at = NOW()
+                     WHERE id = :proposal_id'
+                );
+                $proposalUpdate->execute(['proposal_id' => (int) $project['accepted_proposal_id']]);
+            }
+
+            if (!empty($project['assigned_freelancer_id'])) {
+                $userUpdate = $this->pdo->prepare(
+                    'UPDATE users
+                     SET completed_projects = completed_projects + 1,
+                         reviews_count = reviews_count + 1,
+                         rating = CASE WHEN rating = 0 THEN 5.00 ELSE LEAST(5.00, rating + 0.02) END,
+                         updated_at = NOW()
+                     WHERE id = :freelancer_id'
+                );
+                $userUpdate->execute(['freelancer_id' => (int) $project['assigned_freelancer_id']]);
+            }
+
+            $this->pdo->commit();
+
+            return $this->findProject($projectId) ?? [];
+        } catch (\Throwable $exception) {
+            $this->pdo->rollBack();
+            throw $exception;
+        }
+    }
+
+    /**
+     * EN: Returns a proposal with related project and user contact data.
+     * RU: Возвращает отклик с проектом и контактными данными пользователей.
+     *
+     * @param int $proposalId Proposal id / ID отклика
+     * @return array<string, mixed>|null
+     */
+    public function findProposal(int $proposalId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT pr.*, p.title AS project_title, p.status AS project_status, p.client_id,
+                    p.assigned_freelancer_id, owner.name AS client_name, owner.email AS client_email,
+                    freelancer.name AS freelancer_name, freelancer.email AS freelancer_email
+             FROM proposals pr
+             INNER JOIN projects p ON p.id = pr.project_id
+             INNER JOIN users owner ON owner.id = p.client_id
+             INNER JOIN users freelancer ON freelancer.id = pr.freelancer_id
+             WHERE pr.id = :proposal_id
+             LIMIT 1'
+        );
+        $statement->execute(['proposal_id' => $proposalId]);
+        $proposal = $statement->fetch();
+
+        return $proposal ?: null;
+    }
+
+    /**
+     * EN: Calculates unified dashboard counters.
+     * RU: Считает показатели единого кабинета.
+     *
+     * @param int $userId User id / ID пользователя
+     * @return array<string, int>
+     */
+    public function dashboardStats(int $userId): array
+    {
         return [
-            'projects' => $this->countOpenProjects(),
-            'proposals' => $proposalCount,
+            'projects' => $this->count('SELECT COUNT(*) FROM projects WHERE client_id = :id', $userId),
+            'proposals' => $this->count('SELECT COUNT(*) FROM proposals WHERE freelancer_id = :id', $userId),
+            'received_proposals' => $this->count(
+                'SELECT COUNT(*) FROM proposals pr INNER JOIN projects p ON p.id = pr.project_id WHERE p.client_id = :id',
+                $userId
+            ),
+            'active_work' => $this->count(
+                'SELECT COUNT(*) FROM projects WHERE assigned_freelancer_id = :id AND status IN ("in_progress", "submitted")',
+                $userId
+            ),
             'open_market' => $this->countOpenProjects(),
         ];
     }
@@ -316,7 +613,7 @@ final class ProjectRepository
             'SELECT
                 (SELECT COUNT(*) FROM projects WHERE status = "open") AS open_projects,
                 (SELECT COUNT(*) FROM proposals) AS proposals,
-                (SELECT COUNT(*) FROM users WHERE role = "freelancer") AS freelancers,
+                (SELECT COUNT(*) FROM users WHERE role <> "owner" AND status = "active") AS freelancers,
                 (SELECT COUNT(*) FROM categories WHERE is_active = 1) AS categories'
         );
 
@@ -358,18 +655,58 @@ final class ProjectRepository
     }
 
     /**
-     * EN: Shared SELECT fragment with category, client, and proposal count context.
-     * RU: Общий SELECT-фрагмент с категорией, заказчиком и счетчиком откликов.
+     * EN: Locks and returns a proposal with project fields for workflow transitions.
+     * RU: Блокирует и возвращает отклик с полями проекта для workflow-переходов.
+     *
+     * @param int $proposalId Proposal id / ID отклика
+     * @return array<string, mixed>|null
+     */
+    private function proposalWithProjectForUpdate(int $proposalId): ?array
+    {
+        $statement = $this->pdo->prepare(
+            'SELECT pr.*, p.client_id, p.status AS project_status
+             FROM proposals pr
+             INNER JOIN projects p ON p.id = pr.project_id
+             WHERE pr.id = :proposal_id
+             FOR UPDATE'
+        );
+        $statement->execute(['proposal_id' => $proposalId]);
+        $proposal = $statement->fetch();
+
+        return $proposal ?: null;
+    }
+
+    /**
+     * EN: Locks and returns one project for completion workflow.
+     * RU: Блокирует и возвращает проект для завершения workflow.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @return array<string, mixed>|null
+     */
+    private function findProjectForUpdate(int $projectId): ?array
+    {
+        $statement = $this->pdo->prepare('SELECT * FROM projects WHERE id = :project_id FOR UPDATE');
+        $statement->execute(['project_id' => $projectId]);
+        $project = $statement->fetch();
+
+        return $project ?: null;
+    }
+
+    /**
+     * EN: Shared SELECT fragment with category, client, assignee, and proposal count context.
+     * RU: Общий SELECT-фрагмент с категорией, автором, исполнителем и счетчиком откликов.
      *
      * @return string
      */
     private function projectSelect(): string
     {
         return 'SELECT p.*, c.name AS category_name, c.accent_color AS category_accent,
-                       u.name AS client_name, u.city AS client_city,
+                       u.name AS client_name, u.city AS client_city, u.email AS client_email,
+                       assigned.name AS assigned_freelancer_name, assigned.email AS assigned_freelancer_email,
                        (SELECT COUNT(*) FROM proposals pr WHERE pr.project_id = p.id) AS proposals_count
                 FROM projects p
                 INNER JOIN categories c ON c.id = p.category_id
-                INNER JOIN users u ON u.id = p.client_id';
+                INNER JOIN users u ON u.id = p.client_id
+                LEFT JOIN users assigned ON assigned.id = p.assigned_freelancer_id';
     }
 }

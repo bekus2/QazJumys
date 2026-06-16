@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: auth-register.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Registration page for client and freelancer roles.
- * RU: Страница регистрации для ролей заказчика и исполнителя.
+ * EN: Registration page for a unified marketplace member account.
+ * RU: Страница регистрации единого аккаунта участника маркетплейса.
  */
 ?>
 <section class="auth-section">
@@ -17,26 +17,16 @@
         <div class="auth-copy">
             <span class="eyebrow">Аккаунт ашу</span>
             <h1>QazJumys аккаунтын ашу</h1>
-            <p>Тапсырыс беруші жобаны жариялайды, орындаушы бюджет пен мерзімі бар ұсыныс жібереді.</p>
+            <p>Бір аккаунтпен жоба жариялап, басқа жобаларға ұсыныс жіберуге болады.</p>
             <div class="auth-points">
                 <span>CSRF қорғаныс</span>
-                <span>Рөл бойынша кабинет</span>
-                <span>Жобалар мен ұсыныстар</span>
+                <span>Бір аккаунт</span>
+                <span>Жоба, ұсыныс, хабарлама</span>
             </div>
         </div>
         <form class="panel form js-ajax-form" action="ajax.php" method="post" data-success-redirect="<?= e(url_for('dashboard')) ?>">
             <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
             <input type="hidden" name="action" value="register">
-            <div class="role-switch" role="radiogroup" aria-label="Рөл">
-                <label>
-                    <input type="radio" name="role" value="client" checked>
-                    <span>Тапсырыс беруші</span>
-                </label>
-                <label>
-                    <input type="radio" name="role" value="freelancer">
-                    <span>Орындаушы</span>
-                </label>
-            </div>
             <label>
                 <span>Аты-жөні</span>
                 <input type="text" name="name" required minlength="2" maxlength="120" autocomplete="name">

@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: index.php
  * Author: Beck Sarbassov
- * Version: 1.1.0
+ * Version: 1.2.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Front controller for public pages.
- * RU: Front-controller для публичных страниц.
+ * EN: Front controller for public marketplace pages and unified account dashboards.
+ * RU: Front-controller для публичных страниц маркетплейса и единых кабинетов аккаунтов.
  */
 
 declare(strict_types=1);
@@ -17,6 +17,10 @@ declare(strict_types=1);
 use QazJumys\Core\Auth;
 use QazJumys\Core\Database;
 use QazJumys\Repositories\CategoryRepository;
+use QazJumys\Repositories\ComplaintRepository;
+use QazJumys\Repositories\FileRepository;
+use QazJumys\Repositories\MessageRepository;
+use QazJumys\Repositories\NotificationRepository;
 use QazJumys\Repositories\ProjectRepository;
 use QazJumys\Repositories\UserRepository;
 
@@ -46,10 +50,15 @@ $projectFilters = [
     'budget_max' => is_numeric($_GET['budget_max'] ?? null) ? (float) $_GET['budget_max'] : null,
     'sort' => $_GET['sort'] ?? 'latest',
 ];
-$dashboardStats = ['projects' => 0, 'proposals' => 0, 'open_market' => 0];
+$dashboardStats = ['projects' => 0, 'proposals' => 0, 'received_proposals' => 0, 'active_work' => 0, 'open_market' => 0, 'unread_messages' => 0, 'unread_notifications' => 0];
 $profile = $user;
 $myProjects = [];
 $myProposals = [];
+$receivedProposals = [];
+$recentMessages = [];
+$recentFiles = [];
+$recentComplaints = [];
+$notifications = [];
 
 try {
     $pdo = Database::connection($config['database']);
@@ -57,6 +66,10 @@ try {
     $categoryRepository = new CategoryRepository($pdo);
     $projectRepository = new ProjectRepository($pdo);
     $userRepository = new UserRepository($pdo);
+    $messageRepository = new MessageRepository($pdo);
+    $fileRepository = new FileRepository($pdo);
+    $complaintRepository = new ComplaintRepository($pdo);
+    $notificationRepository = new NotificationRepository($pdo, $config['app']);
     $categories = $categoryRepository->all();
     $marketplaceStats = $projectRepository->marketplaceStats();
 
@@ -71,11 +84,18 @@ try {
     }
 
     if ($user && $page === 'dashboard') {
-        $dashboardStats = $projectRepository->dashboardStats((int) $user['id'], (string) $user['role']);
+        $dashboardStats = $projectRepository->dashboardStats((int) $user['id']);
+        $dashboardStats['unread_messages'] = $messageRepository->unreadCount((int) $user['id']);
+        $dashboardStats['unread_notifications'] = $notificationRepository->unreadCount((int) $user['id']);
         $profile = $userRepository->find((int) $user['id']) ?? $user;
-        $myProjects = $user['role'] === 'client' ? $projectRepository->byClient((int) $user['id']) : [];
-        $myProposals = $user['role'] === 'freelancer' ? $projectRepository->proposalsByFreelancer((int) $user['id']) : [];
-        $recommendedProjects = $user['role'] === 'freelancer' ? $projectRepository->latestOpen(3) : [];
+        $myProjects = $projectRepository->byClient((int) $user['id']);
+        $myProposals = $projectRepository->proposalsByFreelancer((int) $user['id']);
+        $receivedProposals = $projectRepository->proposalsForClient((int) $user['id']);
+        $recommendedProjects = $projectRepository->latestOpen(3);
+        $recentMessages = $messageRepository->recentForUser((int) $user['id']);
+        $recentFiles = $fileRepository->recentForUser((int) $user['id']);
+        $recentComplaints = $complaintRepository->byReporter((int) $user['id']);
+        $notifications = $notificationRepository->recentForUser((int) $user['id']);
     }
 
     if ($user && $page === 'profile') {
@@ -90,7 +110,7 @@ if (in_array($page, $protectedPages, true) && !$user) {
     redirect_to(url_for('login'));
 }
 
-if ($page === 'project-create' && $user && $user['role'] !== 'client') {
+if ($page === 'project-create' && $user && ($user['role'] ?? '') === 'owner') {
     redirect_to(url_for('dashboard'));
 }
 
@@ -123,4 +143,9 @@ render_view($route['view'], [
     'profile' => $profile,
     'myProjects' => $myProjects,
     'myProposals' => $myProposals,
+    'receivedProposals' => $receivedProposals,
+    'recentMessages' => $recentMessages,
+    'recentFiles' => $recentFiles,
+    'recentComplaints' => $recentComplaints,
+    'notifications' => $notifications,
 ]);
