@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: ajax.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Handles AJAX actions for auth, projects, proposals, workflow, messages, uploads, complaints, and owner tools.
- * RU: Обрабатывает AJAX-действия для входа, проектов, откликов, workflow, сообщений, файлов, жалоб и owner-панели.
+ * EN: Handles AJAX actions for auth, projects, proposals, workflow, engagement tools, messages, uploads, complaints, and owner tools.
+ * RU: Обрабатывает AJAX-действия для входа, проектов, откликов, workflow, инструментов вовлечения, сообщений, файлов, жалоб и owner-панели.
  */
 
 declare(strict_types=1);
@@ -21,6 +21,7 @@ use QazJumys\Core\Response;
 use QazJumys\Core\Upload;
 use QazJumys\Core\Validator;
 use QazJumys\Repositories\ComplaintRepository;
+use QazJumys\Repositories\EngagementRepository;
 use QazJumys\Repositories\FileRepository;
 use QazJumys\Repositories\MessageRepository;
 use QazJumys\Repositories\NotificationRepository;
@@ -52,6 +53,7 @@ $files = new FileRepository($pdo);
 $complaints = new ComplaintRepository($pdo);
 $notifications = new NotificationRepository($pdo, $config['app']);
 $owner = new OwnerRepository($pdo);
+$engagement = new EngagementRepository($pdo);
 
 try {
     match ($action) {
@@ -59,21 +61,34 @@ try {
         'login' => handle_login($users),
         'logout' => handle_logout(),
         'project_create' => handle_project_create($projects, $notifications),
+        'project_save_toggle' => handle_project_save_toggle($engagement),
+        'saved_search_create' => handle_saved_search_create($engagement),
         'proposal_create' => handle_proposal_create($projects, $notifications),
+        'proposal_shortlist' => handle_proposal_shortlist($projects, $notifications),
+        'proposal_withdraw' => handle_proposal_withdraw($projects, $notifications),
         'proposal_accept' => handle_proposal_accept($projects, $notifications),
         'proposal_decline' => handle_proposal_decline($projects, $notifications),
+        'project_cancel' => handle_project_cancel($projects, $notifications),
         'project_submit_delivery' => handle_project_submit_delivery($projects, $notifications),
         'project_complete' => handle_project_complete($projects, $notifications),
+        'milestone_create' => handle_milestone_create($engagement),
+        'milestone_complete' => handle_milestone_complete($engagement),
+        'review_create' => handle_review_create($engagement, $notifications),
+        'portfolio_create' => handle_portfolio_create($engagement),
+        'portfolio_delete' => handle_portfolio_delete($engagement),
+        'verification_request' => handle_verification_request($engagement, $notifications),
         'message_send' => handle_message_send($projects, $messages, $notifications),
         'file_upload' => handle_file_upload($projects, $files, $config['app']),
         'complaint_create' => handle_complaint_create($complaints, $notifications),
         'notification_mark_read' => handle_notification_mark_read($notifications),
         'profile_update' => handle_profile_update($users),
+        'password_change' => handle_password_change($users),
         'owner_user_block' => handle_owner_user_block($owner, $notifications),
         'owner_user_unblock' => handle_owner_user_unblock($owner, $notifications),
         'owner_user_reset_password' => handle_owner_user_reset_password($owner, $notifications),
         'owner_complaint_update' => handle_owner_complaint_update($owner),
         'owner_project_status' => handle_owner_project_status($owner),
+        'owner_verification_update' => handle_owner_verification_update($engagement, $owner, $notifications),
         default => Response::json(['ok' => false, 'message' => 'Белгісіз әрекет.'], 400),
     };
 } catch (RuntimeException $exception) {
@@ -227,6 +242,53 @@ function handle_project_create(ProjectRepository $projects, NotificationReposito
 }
 
 /**
+ * EN: Toggles a saved project from the project list.
+ * RU: Переключает сохранение проекта из списка проектов.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_project_save_toggle(EngagementRepository $engagement): never
+{
+    $user = require_member_account();
+    $projectId = (int) ($_POST['project_id'] ?? 0);
+
+    if ($projectId <= 0) {
+        Response::json(['ok' => false, 'message' => 'Жоба табылмады.'], 422);
+    }
+
+    $saved = $engagement->toggleSavedProject((int) $user['id'], $projectId);
+
+    Response::json([
+        'ok' => true,
+        'message' => $saved ? 'Жоба сақталды.' : 'Жоба сақталғандардан алынды.',
+        'redirect' => url_for('projects'),
+    ]);
+}
+
+/**
+ * EN: Saves reusable project search filters for the current user.
+ * RU: Сохраняет повторно используемые фильтры поиска проектов для текущего пользователя.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_saved_search_create(EngagementRepository $engagement): never
+{
+    $user = require_member_account();
+    $label = Validator::text($_POST['label'] ?? '', 120);
+    $queryString = clean_saved_search_query((string) ($_POST['query_string'] ?? ''));
+
+    if (mb_strlen($label, 'UTF-8') < 3) {
+        Response::json(['ok' => false, 'message' => 'Іздеу атауын толтырыңыз.'], 422);
+    }
+
+    $engagement->createSavedSearch((int) $user['id'], $label, $queryString);
+
+    Response::json(['ok' => true, 'message' => 'Іздеу сақталды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
  * EN: Creates a proposal for an open project from any active member account.
  * RU: Создает отклик на открытый проект от любого активного аккаунта участника.
  *
@@ -267,6 +329,53 @@ function handle_proposal_create(ProjectRepository $projects, NotificationReposit
     }
 
     Response::json(['ok' => true, 'message' => 'Ұсыныс жіберілді.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Adds a received proposal to the owner's shortlist.
+ * RU: Добавляет полученный отклик в shortlist автора проекта.
+ *
+ * @param ProjectRepository $projects Project repository / Репозиторий проектов
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_proposal_shortlist(ProjectRepository $projects, NotificationRepository $notifications): never
+{
+    $user = require_member_account();
+    $proposal = $projects->shortlistProposal((int) ($_POST['proposal_id'] ?? 0), (int) $user['id']);
+
+    $notifications->notify(
+        (int) $proposal['freelancer_id'],
+        'proposal_shortlisted',
+        'Отклик shortlisted',
+        (string) $proposal['project_title'] . ' жобасы бойынша ұсынысыңыз shortlist ішіне қосылды.'
+    );
+
+    Response::json(['ok' => true, 'message' => 'Отклик shortlist ішіне қосылды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Lets a freelancer withdraw a sent or shortlisted proposal.
+ * RU: Позволяет исполнителю отозвать отправленный или shortlisted отклик.
+ *
+ * @param ProjectRepository $projects Project repository / Репозиторий проектов
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_proposal_withdraw(ProjectRepository $projects, NotificationRepository $notifications): never
+{
+    $user = require_member_account();
+    $proposal = $projects->withdrawProposal((int) ($_POST['proposal_id'] ?? 0), (int) $user['id']);
+
+    $notifications->notify(
+        (int) $proposal['client_id'],
+        'proposal_withdrawn',
+        'Отклик отозван',
+        (string) $proposal['freelancer_name'] . ' ' . (string) $proposal['project_title'] . ' жобасы бойынша отклик қайтарып алды.',
+        false
+    );
+
+    Response::json(['ok' => true, 'message' => 'Отклик қайтарылды.', 'redirect' => url_for('dashboard')]);
 }
 
 /**
@@ -316,6 +425,31 @@ function handle_proposal_decline(ProjectRepository $projects, NotificationReposi
 }
 
 /**
+ * EN: Cancels an own project before completion.
+ * RU: Отменяет собственный проект до завершения.
+ *
+ * @param ProjectRepository $projects Project repository / Репозиторий проектов
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_project_cancel(ProjectRepository $projects, NotificationRepository $notifications): never
+{
+    $user = require_member_account();
+    $project = $projects->cancelProject((int) ($_POST['project_id'] ?? 0), (int) $user['id']);
+
+    if (!empty($project['assigned_freelancer_id'])) {
+        $notifications->notify(
+            (int) $project['assigned_freelancer_id'],
+            'project_cancelled',
+            'Жоба тоқтатылды',
+            (string) $project['title'] . ' жобасы тоқтатылды.'
+        );
+    }
+
+    Response::json(['ok' => true, 'message' => 'Жоба тоқтатылды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
  * EN: Lets the accepted freelancer submit delivery for review.
  * RU: Позволяет принятому исполнителю сдать работу на проверку.
  *
@@ -361,6 +495,145 @@ function handle_project_complete(ProjectRepository $projects, NotificationReposi
     }
 
     Response::json(['ok' => true, 'message' => 'Жоба аяқталды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Creates a project milestone owned by the publisher.
+ * RU: Создает milestone проекта со стороны автора заявки.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_milestone_create(EngagementRepository $engagement): never
+{
+    $user = require_member_account();
+    $projectId = (int) ($_POST['project_id'] ?? 0);
+    $title = Validator::text($_POST['title'] ?? '', 160);
+    $dueDate = trim((string) ($_POST['due_date'] ?? ''));
+
+    if ($projectId <= 0 || mb_strlen($title, 'UTF-8') < 3) {
+        Response::json(['ok' => false, 'message' => 'Milestone атауын толтырыңыз.'], 422);
+    }
+
+    if ($dueDate !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dueDate)) {
+        Response::json(['ok' => false, 'message' => 'Күн форматы YYYY-MM-DD болуы керек.'], 422);
+    }
+
+    $engagement->createMilestone($projectId, (int) $user['id'], $title, $dueDate ?: null);
+
+    Response::json(['ok' => true, 'message' => 'Milestone қосылды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Marks a visible project milestone as done.
+ * RU: Отмечает видимый milestone проекта выполненным.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_milestone_complete(EngagementRepository $engagement): never
+{
+    $user = require_member_account();
+    $engagement->completeMilestone((int) ($_POST['milestone_id'] ?? 0), (int) $user['id']);
+
+    Response::json(['ok' => true, 'message' => 'Milestone орындалды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Creates a review after a completed project.
+ * RU: Создает отзыв после завершенного проекта.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_review_create(EngagementRepository $engagement, NotificationRepository $notifications): never
+{
+    $user = require_member_account();
+    $projectId = (int) ($_POST['project_id'] ?? 0);
+    $revieweeId = (int) ($_POST['reviewee_id'] ?? 0);
+    $rating = max(1, min(5, (int) ($_POST['rating'] ?? 5)));
+    $comment = Validator::text($_POST['comment'] ?? '', 1200);
+
+    if ($projectId <= 0 || $revieweeId <= 0 || $revieweeId === (int) $user['id'] || mb_strlen($comment, 'UTF-8') < 10) {
+        Response::json(['ok' => false, 'message' => 'Review үшін рейтинг пен толық пікір қажет.'], 422);
+    }
+
+    $engagement->createReview($projectId, (int) $user['id'], $revieweeId, $rating, $comment);
+    $notifications->notify($revieweeId, 'review_created', 'Жаңа review', 'Сізге аяқталған жоба бойынша жаңа пікір қалдырылды.', false);
+
+    Response::json(['ok' => true, 'message' => 'Review сақталды.', 'redirect' => url_for('dashboard')]);
+}
+
+/**
+ * EN: Adds a portfolio item to the current profile.
+ * RU: Добавляет элемент портфолио в текущий профиль.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_portfolio_create(EngagementRepository $engagement): never
+{
+    $user = require_active_account();
+    $title = Validator::text($_POST['title'] ?? '', 160);
+    $description = Validator::text($_POST['description'] ?? '', 1200);
+    $url = Validator::text($_POST['url'] ?? '', 255);
+    $skills = Validator::text($_POST['skills'] ?? '', 255);
+
+    if (mb_strlen($title, 'UTF-8') < 3 || mb_strlen($description, 'UTF-8') < 10) {
+        Response::json(['ok' => false, 'message' => 'Portfolio атауы мен сипаттамасын толтырыңыз.'], 422);
+    }
+
+    if ($url !== '' && !filter_var($url, FILTER_VALIDATE_URL)) {
+        Response::json(['ok' => false, 'message' => 'Portfolio URL дұрыс емес.'], 422);
+    }
+
+    $engagement->createPortfolioItem((int) $user['id'], [
+        'title' => $title,
+        'description' => $description,
+        'url' => $url,
+        'skills' => $skills,
+    ]);
+
+    Response::json(['ok' => true, 'message' => 'Portfolio қосылды.', 'redirect' => url_for('profile')]);
+}
+
+/**
+ * EN: Deletes an own portfolio item.
+ * RU: Удаляет собственный элемент портфолио.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @return never
+ */
+function handle_portfolio_delete(EngagementRepository $engagement): never
+{
+    $user = require_active_account();
+    $engagement->deletePortfolioItem((int) ($_POST['item_id'] ?? 0), (int) $user['id']);
+
+    Response::json(['ok' => true, 'message' => 'Portfolio элементі өшірілді.', 'redirect' => url_for('profile')]);
+}
+
+/**
+ * EN: Sends a profile verification request to the owner queue.
+ * RU: Отправляет заявку на верификацию профиля в очередь владельца.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_verification_request(EngagementRepository $engagement, NotificationRepository $notifications): never
+{
+    $user = require_active_account();
+    $note = Validator::text($_POST['note'] ?? '', 1200);
+
+    if (mb_strlen($note, 'UTF-8') < 20) {
+        Response::json(['ok' => false, 'message' => 'Верификация үшін қысқаша дәлелдеме жазыңыз.'], 422);
+    }
+
+    $engagement->requestVerification((int) $user['id'], $note);
+    $notifications->notify((int) $user['id'], 'verification_requested', 'Верификация жіберілді', 'Owner сіздің заявкаңызды қарайды.', false);
+
+    Response::json(['ok' => true, 'message' => 'Верификация заявкасы жіберілді.', 'redirect' => url_for('profile')]);
 }
 
 /**
@@ -504,6 +777,36 @@ function handle_profile_update(UserRepository $users): never
 }
 
 /**
+ * EN: Changes password for the authenticated account.
+ * RU: Меняет пароль авторизованного аккаунта.
+ *
+ * @param UserRepository $users User repository / Репозиторий пользователей
+ * @return never
+ */
+function handle_password_change(UserRepository $users): never
+{
+    $user = require_active_account();
+    $currentPassword = (string) ($_POST['current_password'] ?? '');
+    $newPassword = (string) ($_POST['new_password'] ?? '');
+
+    if (mb_strlen($newPassword, 'UTF-8') < 10) {
+        Response::json(['ok' => false, 'message' => 'Жаңа пароль кемінде 10 таңбадан тұруы керек.'], 422);
+    }
+
+    if (!$users->changePassword((int) $user['id'], $currentPassword, $newPassword)) {
+        Response::json(['ok' => false, 'message' => 'Қазіргі пароль дұрыс емес.'], 422);
+    }
+
+    $fresh = $users->find((int) $user['id']);
+
+    if ($fresh) {
+        Auth::login($fresh);
+    }
+
+    Response::json(['ok' => true, 'message' => 'Пароль жаңартылды.', 'redirect' => url_for('profile')]);
+}
+
+/**
  * EN: Blocks a member from owner.php.
  * RU: Блокирует участника из owner.php.
  *
@@ -625,6 +928,39 @@ function handle_owner_project_status(OwnerRepository $owner): never
 }
 
 /**
+ * EN: Approves or rejects a profile verification request from owner.php.
+ * RU: Одобряет или отклоняет заявку на верификацию из owner.php.
+ *
+ * @param EngagementRepository $engagement Engagement repository / Репозиторий вовлечения
+ * @param OwnerRepository $owner Owner repository / Репозиторий владельца
+ * @param NotificationRepository $notifications Notification repository / Репозиторий уведомлений
+ * @return never
+ */
+function handle_owner_verification_update(EngagementRepository $engagement, OwnerRepository $owner, NotificationRepository $notifications): never
+{
+    $admin = require_owner_account();
+    $requestId = (int) ($_POST['request_id'] ?? 0);
+    $status = (string) ($_POST['status'] ?? '');
+    $ownerNote = Validator::text($_POST['owner_note'] ?? '', 1200);
+
+    if ($requestId <= 0 || !in_array($status, ['approved', 'rejected'], true)) {
+        Response::json(['ok' => false, 'message' => 'Верификация статусы дұрыс емес.'], 422);
+    }
+
+    $request = $engagement->reviewVerification($requestId, $status, $ownerNote);
+    $owner->audit((int) $admin['id'], 'verification_' . $status, 'verification_request', $requestId, $ownerNote);
+    $notifications->notify(
+        (int) $request['user_id'],
+        'verification_' . $status,
+        $status === 'approved' ? 'Верификация мақұлданды' : 'Верификация отклон етілді',
+        $ownerNote !== '' ? $ownerNote : 'Owner верификация заявкаңызды қарады.',
+        true
+    );
+
+    Response::json(['ok' => true, 'message' => 'Верификация жаңартылды.', 'redirect' => 'owner.php']);
+}
+
+/**
  * EN: Requires any authenticated non-blocked account.
  * RU: Требует любой авторизованный незаблокированный аккаунт.
  *
@@ -677,6 +1013,42 @@ function require_owner_account(): array
     }
 
     return $user;
+}
+
+/**
+ * EN: Keeps only supported marketplace filter keys before storing a saved search.
+ * RU: Оставляет только поддерживаемые ключи фильтра маркетплейса перед сохранением поиска.
+ *
+ * @param string $queryString Raw query string / Исходная query string
+ * @return string Clean query string / Очищенная query string
+ */
+function clean_saved_search_query(string $queryString): string
+{
+    parse_str(ltrim($queryString, '?'), $parts);
+    $allowedKeys = [
+        'page',
+        'q',
+        'category_id',
+        'project_type',
+        'experience_level',
+        'budget_min',
+        'budget_max',
+        'is_remote',
+        'is_urgent',
+        'verified_client',
+        'sort',
+    ];
+    $clean = ['page' => 'projects'];
+
+    foreach ($allowedKeys as $key) {
+        if ($key === 'page' || !isset($parts[$key]) || is_array($parts[$key])) {
+            continue;
+        }
+
+        $clean[$key] = mb_substr(Validator::text((string) $parts[$key], 160), 0, 160, 'UTF-8');
+    }
+
+    return http_build_query($clean);
 }
 
 /**

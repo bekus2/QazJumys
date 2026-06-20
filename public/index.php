@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: index.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Front controller for public marketplace pages and unified account dashboards.
- * RU: Front-controller для публичных страниц маркетплейса и единых кабинетов аккаунтов.
+ * EN: Front controller for public marketplace pages, engagement features, and unified account dashboards.
+ * RU: Front-controller для публичных страниц маркетплейса, функций вовлечения и единых кабинетов аккаунтов.
  */
 
 declare(strict_types=1);
@@ -18,6 +18,7 @@ use QazJumys\Core\Auth;
 use QazJumys\Core\Database;
 use QazJumys\Repositories\CategoryRepository;
 use QazJumys\Repositories\ComplaintRepository;
+use QazJumys\Repositories\EngagementRepository;
 use QazJumys\Repositories\FileRepository;
 use QazJumys\Repositories\MessageRepository;
 use QazJumys\Repositories\NotificationRepository;
@@ -48,13 +49,24 @@ $projectFilters = [
     'experience_level' => $_GET['experience_level'] ?? '',
     'budget_min' => is_numeric($_GET['budget_min'] ?? null) ? (float) $_GET['budget_min'] : null,
     'budget_max' => is_numeric($_GET['budget_max'] ?? null) ? (float) $_GET['budget_max'] : null,
+    'is_remote' => isset($_GET['is_remote']) ? 1 : 0,
+    'is_urgent' => isset($_GET['is_urgent']) ? 1 : 0,
+    'verified_client' => isset($_GET['verified_client']) ? 1 : 0,
     'sort' => $_GET['sort'] ?? 'latest',
 ];
-$dashboardStats = ['projects' => 0, 'proposals' => 0, 'received_proposals' => 0, 'active_work' => 0, 'open_market' => 0, 'unread_messages' => 0, 'unread_notifications' => 0];
+$dashboardStats = ['projects' => 0, 'proposals' => 0, 'received_proposals' => 0, 'active_work' => 0, 'open_market' => 0, 'unread_messages' => 0, 'unread_notifications' => 0, 'saved_projects' => 0, 'saved_searches' => 0, 'portfolio_items' => 0, 'pending_reviews' => 0];
 $profile = $user;
 $myProjects = [];
 $myProposals = [];
 $receivedProposals = [];
+$savedProjectIds = [];
+$savedProjects = [];
+$savedSearches = [];
+$milestones = [];
+$pendingReviews = [];
+$reviewsReceived = [];
+$portfolioItems = [];
+$verificationRequest = null;
 $recentMessages = [];
 $recentFiles = [];
 $recentComplaints = [];
@@ -70,6 +82,7 @@ try {
     $fileRepository = new FileRepository($pdo);
     $complaintRepository = new ComplaintRepository($pdo);
     $notificationRepository = new NotificationRepository($pdo, $config['app']);
+    $engagementRepository = new EngagementRepository($pdo);
     $categories = $categoryRepository->all();
     $marketplaceStats = $projectRepository->marketplaceStats();
 
@@ -81,10 +94,19 @@ try {
 
     if ($page === 'projects') {
         $projects = $projectRepository->searchOpen($projectFilters);
+        $projectRepository->recordImpressions(array_column($projects, 'id'));
+
+        if ($user && ($user['role'] ?? '') !== 'owner') {
+            $savedProjectIds = $engagementRepository->savedProjectIds((int) $user['id']);
+        }
     }
 
     if ($user && $page === 'dashboard') {
-        $dashboardStats = $projectRepository->dashboardStats((int) $user['id']);
+        $dashboardStats = array_merge(
+            $dashboardStats,
+            $projectRepository->dashboardStats((int) $user['id']),
+            $engagementRepository->engagementStats((int) $user['id'])
+        );
         $dashboardStats['unread_messages'] = $messageRepository->unreadCount((int) $user['id']);
         $dashboardStats['unread_notifications'] = $notificationRepository->unreadCount((int) $user['id']);
         $profile = $userRepository->find((int) $user['id']) ?? $user;
@@ -92,6 +114,13 @@ try {
         $myProposals = $projectRepository->proposalsByFreelancer((int) $user['id']);
         $receivedProposals = $projectRepository->proposalsForClient((int) $user['id']);
         $recommendedProjects = $projectRepository->latestOpen(3);
+        $savedProjects = $engagementRepository->savedProjects((int) $user['id']);
+        $savedSearches = $engagementRepository->savedSearches((int) $user['id']);
+        $milestones = $engagementRepository->milestonesForUser((int) $user['id']);
+        $pendingReviews = $engagementRepository->pendingReviews((int) $user['id']);
+        $reviewsReceived = $engagementRepository->reviewsForUser((int) $user['id']);
+        $portfolioItems = $engagementRepository->portfolioItems((int) $user['id']);
+        $verificationRequest = $engagementRepository->latestVerificationForUser((int) $user['id']);
         $recentMessages = $messageRepository->recentForUser((int) $user['id']);
         $recentFiles = $fileRepository->recentForUser((int) $user['id']);
         $recentComplaints = $complaintRepository->byReporter((int) $user['id']);
@@ -100,6 +129,9 @@ try {
 
     if ($user && $page === 'profile') {
         $profile = $userRepository->find((int) $user['id']) ?? $user;
+        $portfolioItems = $engagementRepository->portfolioItems((int) $user['id']);
+        $reviewsReceived = $engagementRepository->reviewsForUser((int) $user['id']);
+        $verificationRequest = $engagementRepository->latestVerificationForUser((int) $user['id']);
     }
 } catch (Throwable $exception) {
     $dbNotice = 'MySQL баптауы аяқталмаған. .env файлын жасап, database/schema.sql және database/seed.sql импорттаңыз.';
@@ -144,6 +176,14 @@ render_view($route['view'], [
     'myProjects' => $myProjects,
     'myProposals' => $myProposals,
     'receivedProposals' => $receivedProposals,
+    'savedProjectIds' => $savedProjectIds,
+    'savedProjects' => $savedProjects,
+    'savedSearches' => $savedSearches,
+    'milestones' => $milestones,
+    'pendingReviews' => $pendingReviews,
+    'reviewsReceived' => $reviewsReceived,
+    'portfolioItems' => $portfolioItems,
+    'verificationRequest' => $verificationRequest,
     'recentMessages' => $recentMessages,
     'recentFiles' => $recentFiles,
     'recentComplaints' => $recentComplaints,

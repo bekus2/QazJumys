@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: run.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Lightweight CI test runner for PHP syntax, required docs, and schema feature checks.
- * RU: Легкий CI runner для проверки PHP-синтаксиса, обязательной документации и возможностей SQL-схемы.
+ * EN: Lightweight CI test runner for PHP syntax, required docs, schema feature checks, and v1.3 engagement coverage.
+ * RU: Легкий CI runner для проверки PHP-синтаксиса, обязательной документации, SQL-схемы и покрытия функций v1.3.
  */
 
 declare(strict_types=1);
@@ -76,12 +76,38 @@ foreach ([
     'CREATE TABLE IF NOT EXISTS complaints',
     'CREATE TABLE IF NOT EXISTS notifications',
     'CREATE TABLE IF NOT EXISTS audit_logs',
+    'views_count INT UNSIGNED NOT NULL DEFAULT 0',
+    'last_activity_at DATETIME NULL',
+    'CREATE TABLE IF NOT EXISTS saved_projects',
+    'CREATE TABLE IF NOT EXISTS saved_searches',
+    'CREATE TABLE IF NOT EXISTS project_milestones',
+    'CREATE TABLE IF NOT EXISTS reviews',
+    'CREATE TABLE IF NOT EXISTS portfolio_items',
+    'CREATE TABLE IF NOT EXISTS verification_requests',
 ] as $needle) {
     assert_check(str_contains($schema, $needle), 'Schema does not contain required token: ' . $needle);
 }
 
 assert_check(is_file($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'owner.php'), 'owner.php is missing.');
 assert_check(is_file($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'download.php'), 'download.php is missing.');
+assert_check(is_file($root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'EngagementRepository.php'), 'EngagementRepository.php is missing.');
+
+$ajax = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'ajax.php');
+foreach ([
+    'project_save_toggle',
+    'saved_search_create',
+    'proposal_shortlist',
+    'proposal_withdraw',
+    'project_cancel',
+    'milestone_create',
+    'review_create',
+    'portfolio_create',
+    'verification_request',
+    'owner_verification_update',
+    'password_change',
+] as $action) {
+    assert_check(str_contains($ajax, $action), 'ajax.php does not contain action: ' . $action);
+}
 
 if ($failures !== []) {
     fwrite(STDERR, "QazJumys CI checks failed:\n- " . implode("\n- ", $failures) . "\n");

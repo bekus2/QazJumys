@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: schema.sql
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
  * Last Updated: 2026-06-16
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: MySQL schema for unified accounts, projects, proposals, messages, uploads, complaints, notifications, and owner tools.
- * RU: MySQL-схема для единых аккаунтов, проектов, откликов, сообщений, файлов, жалоб, уведомлений и owner-инструментов.
+ * EN: MySQL schema for unified accounts, projects, proposals, saves, searches, portfolios, milestones, reviews, messaging, uploads, complaints, notifications, verification, and owner tools.
+ * RU: MySQL-схема для единых аккаунтов, проектов, откликов, сохранений, поисков, портфолио, milestones, reviews, сообщений, файлов, жалоб, уведомлений, верификации и owner-инструментов.
  */
 
 CREATE DATABASE IF NOT EXISTS qazjumys_portal
@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS projects (
     is_remote TINYINT(1) NOT NULL DEFAULT 1,
     is_featured TINYINT(1) NOT NULL DEFAULT 0,
     is_urgent TINYINT(1) NOT NULL DEFAULT 0,
+    views_count INT UNSIGNED NOT NULL DEFAULT 0,
     budget_min DECIMAL(12,2) NOT NULL DEFAULT 0,
     budget_max DECIMAL(12,2) NOT NULL DEFAULT 0,
     deadline_days INT UNSIGNED NOT NULL DEFAULT 7,
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS projects (
     submitted_at DATETIME NULL,
     completed_at DATETIME NULL,
     cancelled_at DATETIME NULL,
+    last_activity_at DATETIME NULL,
     created_at DATETIME NOT NULL,
     updated_at DATETIME NOT NULL,
     CONSTRAINT fk_projects_client FOREIGN KEY (client_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -93,6 +95,8 @@ CREATE TABLE IF NOT EXISTS projects (
     INDEX idx_projects_type_level (project_type, experience_level),
     INDEX idx_projects_category_status (category_id, status),
     INDEX idx_projects_assigned_status (assigned_freelancer_id, status),
+    INDEX idx_projects_views_status (status, views_count),
+    INDEX idx_projects_activity (last_activity_at),
     FULLTEXT INDEX ft_projects_title_description_skills (title, description, skills)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -208,4 +212,79 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     created_at DATETIME NOT NULL,
     CONSTRAINT fk_audit_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_audit_action_created (action, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS saved_projects (
+    user_id BIGINT UNSIGNED NOT NULL,
+    project_id BIGINT UNSIGNED NOT NULL,
+    created_at DATETIME NOT NULL,
+    PRIMARY KEY (user_id, project_id),
+    CONSTRAINT fk_saved_projects_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_saved_projects_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    INDEX idx_saved_projects_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS saved_searches (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    label VARCHAR(140) NOT NULL,
+    query_string VARCHAR(800) NOT NULL,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT fk_saved_searches_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_saved_searches_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS project_milestones (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    owner_id BIGINT UNSIGNED NOT NULL,
+    title VARCHAR(180) NOT NULL,
+    due_date DATE NULL,
+    status ENUM('planned', 'done') NOT NULL DEFAULT 'planned',
+    created_at DATETIME NOT NULL,
+    completed_at DATETIME NULL,
+    CONSTRAINT fk_milestones_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT fk_milestones_owner FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_milestones_project_status (project_id, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS reviews (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    project_id BIGINT UNSIGNED NOT NULL,
+    reviewer_id BIGINT UNSIGNED NOT NULL,
+    reviewee_id BIGINT UNSIGNED NOT NULL,
+    rating TINYINT UNSIGNED NOT NULL,
+    comment TEXT NOT NULL,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT fk_reviews_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reviews_reviewer FOREIGN KEY (reviewer_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reviews_reviewee FOREIGN KEY (reviewee_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY uq_reviews_project_reviewer_reviewee (project_id, reviewer_id, reviewee_id),
+    INDEX idx_reviews_reviewee_created (reviewee_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS portfolio_items (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    title VARCHAR(160) NOT NULL,
+    description TEXT NOT NULL,
+    url VARCHAR(255) NULL,
+    skills VARCHAR(400) NULL,
+    created_at DATETIME NOT NULL,
+    CONSTRAINT fk_portfolio_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_portfolio_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS verification_requests (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    note TEXT NOT NULL,
+    owner_note TEXT NULL,
+    created_at DATETIME NOT NULL,
+    updated_at DATETIME NOT NULL,
+    reviewed_at DATETIME NULL,
+    CONSTRAINT fk_verification_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_verification_status_created (status, created_at),
+    INDEX idx_verification_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

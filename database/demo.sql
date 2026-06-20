@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: demo.sql
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Optional local demo users, projects, bids, messages, complaints, and workflow states.
- * RU: Дополнительные локальные демо-пользователи, проекты, отклики, сообщения, жалобы и состояния workflow.
+ * EN: Optional local demo users, projects, bids, messages, complaints, workflow states, saved items, milestones, reviews, portfolio, and verification queues.
+ * RU: Дополнительные локальные демо-пользователи, проекты, отклики, сообщения, жалобы, workflow, сохранения, milestones, отзывы, портфолио и верификация.
  */
 
 USE qazjumys_portal;
@@ -170,3 +170,80 @@ SELECT u.id, 'demo', 'QazJumys demo дайын', 'Бұл локалды demo д�
 FROM users u
 WHERE u.email IN ('client.demo@qazjumys.local', 'aidana.demo@qazjumys.local')
   AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.user_id = u.id AND n.type = 'demo');
+
+UPDATE projects
+SET views_count = CASE
+        WHEN title LIKE '%CRM%' THEN 48
+        WHEN title LIKE '%Instagram%' THEN 36
+        WHEN title LIKE '%UI kit%' THEN 24
+        ELSE 18
+    END,
+    last_activity_at = COALESCE(last_activity_at, updated_at, created_at, NOW())
+WHERE title IN (
+    'Интернет-дүкенге арналған Instagram контент және Reels пакеті',
+    'Медициналық клиникаға CRM воронка және өтінім есебі',
+    'Қызметтер каталогы бар корпоративтік сайт',
+    'Google Ads аудит және жаңа іздеу кампаниялары',
+    'Мобильді қосымшаға UI kit және 8 негізгі экран'
+);
+
+INSERT IGNORE INTO saved_projects (user_id, project_id, created_at)
+SELECT u.id, p.id, NOW()
+FROM users u
+INNER JOIN projects p ON p.title IN (
+    'Интернет-дүкенге арналған Instagram контент және Reels пакеті',
+    'Мобильді қосымшаға UI kit және 8 негізгі экран'
+)
+WHERE u.email = 'aidana.demo@qazjumys.local';
+
+INSERT INTO saved_searches (user_id, label, query_string, created_at)
+SELECT u.id, 'Remote CRM және automation', 'page=projects&project_type=fixed&experience_level=expert&is_remote=1&sort=activity', NOW()
+FROM users u
+WHERE u.email = 'arman.demo@qazjumys.local'
+  AND NOT EXISTS (SELECT 1 FROM saved_searches ss WHERE ss.user_id = u.id AND ss.label = 'Remote CRM және automation');
+
+INSERT INTO project_milestones (project_id, owner_id, title, due_date, status, created_at, completed_at)
+SELECT p.id, p.client_id, 'CRM funnel map бекіту', DATE_ADD(CURDATE(), INTERVAL 5 DAY), 'planned', NOW(), NULL
+FROM projects p
+WHERE p.title = 'Медициналық клиникаға CRM воронка және өтінім есебі'
+  AND NOT EXISTS (SELECT 1 FROM project_milestones m WHERE m.project_id = p.id AND m.title = 'CRM funnel map бекіту');
+
+INSERT INTO project_milestones (project_id, owner_id, title, due_date, status, created_at, completed_at)
+SELECT p.id, p.client_id, 'Басты бет және қызметтер layout', DATE_SUB(CURDATE(), INTERVAL 2 DAY), 'done', NOW(), NOW()
+FROM projects p
+WHERE p.title = 'Қызметтер каталогы бар корпоративтік сайт'
+  AND NOT EXISTS (SELECT 1 FROM project_milestones m WHERE m.project_id = p.id AND m.title = 'Басты бет және қызметтер layout');
+
+INSERT IGNORE INTO reviews (project_id, reviewer_id, reviewee_id, rating, comment, created_at)
+SELECT p.id, p.client_id, freelancer.id, 5,
+       'Жарнама аудиті нақты болды, минус сөздер мен conversion tracking тез реттелді.',
+       NOW()
+FROM projects p
+INNER JOIN users freelancer ON freelancer.email = 'madina.demo@qazjumys.local'
+WHERE p.title = 'Google Ads аудит және жаңа іздеу кампаниялары';
+
+INSERT IGNORE INTO reviews (project_id, reviewer_id, reviewee_id, rating, comment, created_at)
+SELECT p.id, freelancer.id, p.client_id, 5,
+       'Тапсырыс беруші brief пен access деректерін уақытында берді, жұмыс процесі анық болды.',
+       NOW()
+FROM projects p
+INNER JOIN users freelancer ON freelancer.email = 'madina.demo@qazjumys.local'
+WHERE p.title = 'Google Ads аудит және жаңа іздеу кампаниялары';
+
+INSERT INTO portfolio_items (user_id, title, description, url, skills, created_at)
+SELECT u.id, 'Retail content sprint', '30 күндік reels және Instagram content plan, жарнама hook және visual direction.', 'https://example.com/retail-content', 'SMM, Reels, copywriting', NOW()
+FROM users u
+WHERE u.email = 'aidana.demo@qazjumys.local'
+  AND NOT EXISTS (SELECT 1 FROM portfolio_items pi WHERE pi.user_id = u.id AND pi.title = 'Retail content sprint');
+
+INSERT INTO portfolio_items (user_id, title, description, url, skills, created_at)
+SELECT u.id, 'Clinic CRM flow', 'Lead pipeline, manager reminders және weekly report workflow үшін CRM архитектурасы.', 'https://example.com/clinic-crm', 'CRM, API, automation', NOW()
+FROM users u
+WHERE u.email = 'arman.demo@qazjumys.local'
+  AND NOT EXISTS (SELECT 1 FROM portfolio_items pi WHERE pi.user_id = u.id AND pi.title = 'Clinic CRM flow');
+
+INSERT INTO verification_requests (user_id, status, note, owner_note, created_at, updated_at, reviewed_at)
+SELECT u.id, 'pending', 'Портфолио, аяқталған жобалар және клиенттік ұсыныстар бойынша профильді тексеруге жіберемін.', NULL, NOW(), NOW(), NULL
+FROM users u
+WHERE u.email = 'dias.demo@qazjumys.local'
+  AND NOT EXISTS (SELECT 1 FROM verification_requests vr WHERE vr.user_id = u.id AND vr.status = 'pending');

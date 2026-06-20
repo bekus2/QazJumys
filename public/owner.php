@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: owner.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Protected owner administration panel for statistics, moderation, account control, complaints, and operations logs.
- * RU: Защищенная owner-панель для статистики, модерации, управления аккаунтами, жалоб и операционных журналов.
+ * EN: Protected owner administration panel for statistics, verification, moderation, account control, complaints, and operations logs.
+ * RU: Защищенная owner-панель для статистики, верификации, модерации, управления аккаунтами, жалоб и операционных журналов.
  */
 
 declare(strict_types=1);
@@ -17,6 +17,7 @@ declare(strict_types=1);
 use QazJumys\Core\Auth;
 use QazJumys\Core\Csrf;
 use QazJumys\Core\Database;
+use QazJumys\Repositories\EngagementRepository;
 use QazJumys\Repositories\OwnerRepository;
 
 $config = require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'bootstrap.php';
@@ -26,18 +27,21 @@ $stats = [];
 $users = [];
 $projects = [];
 $complaints = [];
+$verificationRequests = [];
 $emailLogs = [];
 $auditLogs = [];
 
 try {
     $pdo = Database::connection($config['database']);
     $ownerRepository = new OwnerRepository($pdo);
+    $engagementRepository = new EngagementRepository($pdo);
 
     if ($user && Auth::isOwner()) {
         $stats = $ownerRepository->stats();
         $users = $ownerRepository->users();
         $projects = $ownerRepository->projects();
         $complaints = $ownerRepository->complaints();
+        $verificationRequests = $engagementRepository->verificationRequests();
         $emailLogs = $ownerRepository->emailLogs();
         $auditLogs = $ownerRepository->auditLogs();
     }
@@ -120,7 +124,7 @@ $title = 'Owner Panel | QazJumys';
             <div>
                 <span class="eyebrow">Owner operations</span>
                 <h1>Басқару панелі</h1>
-                <p>Платформа статистикасы, пайдаланушылар, шағымдар, жобалар, email-log және audit-log.</p>
+                <p>Платформа статистикасы, пайдаланушылар, верификация, шағымдар, жобалар, email-log және audit-log.</p>
             </div>
             <div class="page-stat">
                 <strong><?= (int) ($stats['complaints_open'] ?? 0) ?></strong>
@@ -141,6 +145,10 @@ $title = 'Owner Panel | QazJumys';
             <div class="stat-card"><span>Откликтер</span><strong><?= (int) $stats['proposals_total'] ?></strong></div>
             <div class="stat-card"><span>Хабарламалар</span><strong><?= (int) $stats['messages_total'] ?></strong></div>
             <div class="stat-card"><span>Файлдар</span><strong><?= (int) $stats['files_total'] ?></strong></div>
+            <div class="stat-card"><span>Сақталған</span><strong><?= (int) $stats['saved_projects_total'] ?></strong></div>
+            <div class="stat-card"><span>Reviews</span><strong><?= (int) $stats['reviews_total'] ?></strong></div>
+            <div class="stat-card"><span>Portfolio</span><strong><?= (int) $stats['portfolio_items_total'] ?></strong></div>
+            <div class="stat-card"><span>Верификация</span><strong><?= (int) $stats['verification_pending'] ?></strong></div>
             <div class="stat-card stat-wide"><span>Аяқталған бюджет</span><strong><?= e(format_money($stats['completed_budget'])) ?></strong></div>
         </div>
     </section>
@@ -160,6 +168,7 @@ $title = 'Owner Panel | QazJumys';
                             <th>Пайдаланушы</th>
                             <th>Статус</th>
                             <th>Жоба / отклик</th>
+                            <th>Trust</th>
                             <th>Әрекет</th>
                         </tr>
                         </thead>
@@ -176,6 +185,11 @@ $title = 'Owner Panel | QazJumys';
                                     <span><?= e($account['role']) ?></span>
                                 </td>
                                 <td><?= (int) $account['projects_count'] ?> / <?= (int) $account['proposals_count'] ?></td>
+                                <td>
+                                    <span>Portfolio: <?= (int) ($account['portfolio_count'] ?? 0) ?></span>
+                                    <span>Reviews: <?= (int) ($account['reviews_received'] ?? 0) ?></span>
+                                    <span><?= e($account['verification_status'] ?? 'no request') ?></span>
+                                </td>
                                 <td>
                                     <?php if (($account['role'] ?? '') !== 'owner'): ?>
                                         <div class="owner-actions">
@@ -208,6 +222,44 @@ $title = 'Owner Panel | QazJumys';
                         <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+            </section>
+
+            <section class="panel owner-panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Verification</span>
+                    <h2>Верификация</h2>
+                </div>
+                <div class="owner-stack">
+                    <?php foreach ($verificationRequests as $request): ?>
+                        <article class="owner-item">
+                            <div class="project-meta">
+                                <span><?= e($request['status']) ?></span>
+                                <span>#<?= (int) $request['id'] ?></span>
+                            </div>
+                            <h3><?= e($request['name']) ?></h3>
+                            <p><?= e($request['note']) ?></p>
+                            <p class="muted"><?= e($request['email']) ?> · <?= e($request['city'] ?? '') ?> · <?= e($request['headline'] ?? '') ?></p>
+                            <?php if (($request['status'] ?? '') === 'pending'): ?>
+                                <form class="form mini js-ajax-form" action="ajax.php" method="post">
+                                    <input type="hidden" name="_csrf" value="<?= e(Csrf::token()) ?>">
+                                    <input type="hidden" name="action" value="owner_verification_update">
+                                    <input type="hidden" name="request_id" value="<?= (int) $request['id'] ?>">
+                                    <select name="status">
+                                        <option value="approved">Approve</option>
+                                        <option value="rejected">Reject</option>
+                                    </select>
+                                    <textarea name="owner_note" rows="2" placeholder="Owner note"><?= e($request['owner_note'] ?? '') ?></textarea>
+                                    <button class="btn btn-small" type="submit">Сақтау</button>
+                                </form>
+                            <?php else: ?>
+                                <p class="muted"><?= e($request['owner_note'] ?? '') ?></p>
+                            <?php endif; ?>
+                        </article>
+                    <?php endforeach; ?>
+                    <?php if (empty($verificationRequests)): ?>
+                        <p class="muted">Верификация заявкалары жоқ.</p>
+                    <?php endif; ?>
                 </div>
             </section>
 

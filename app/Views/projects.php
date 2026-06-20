@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: projects.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Displays searchable open projects and secure proposal forms for unified accounts.
- * RU: Показывает поиск открытых проектов и защищенные формы отклика для единых аккаунтов.
+ * EN: Displays searchable open projects with saved projects, saved searches, project metrics, and secure proposal forms.
+ * RU: Показывает поиск открытых проектов с сохранением проектов, сохранением поиска, метриками и защищенными формами отклика.
  */
 
 $filters = $projectFilters ?? [];
@@ -20,13 +20,18 @@ $experienceLevel = (string) ($filters['experience_level'] ?? '');
 $sort = (string) ($filters['sort'] ?? 'latest');
 $budgetMin = $filters['budget_min'] ?? null;
 $budgetMax = $filters['budget_max'] ?? null;
+$isRemote = !empty($filters['is_remote']);
+$isUrgent = !empty($filters['is_urgent']);
+$verifiedClient = !empty($filters['verified_client']);
+$savedIds = array_map('intval', $savedProjectIds ?? []);
+$currentQueryString = $_SERVER['QUERY_STRING'] ?? 'page=projects';
 ?>
 <section class="page-hero">
     <div class="container page-hero-grid">
         <div>
             <span class="eyebrow">Жобалар</span>
             <h1>Ашық digital тапсырмалар</h1>
-            <p>Категория, бюджет, дағды және мерзім бойынша таңдаңыз. Бір аккаунтпен жоба жариялап та, ұсыныс жіберіп те жұмыс істей аласыз.</p>
+            <p>Категория, бюджет, дағды, мерзім және сенім белгілері бойынша таңдаңыз. Бір аккаунтпен жоба жариялап та, басқа жобаларға ұсыныс жіберіп те жұмыс істей аласыз.</p>
         </div>
         <div class="page-stat">
             <strong><?= count($projects) ?></strong>
@@ -37,7 +42,7 @@ $budgetMax = $filters['budget_max'] ?? null;
 
 <section class="section section-tight">
     <div class="container">
-        <form class="filter-bar filter-bar-advanced" action="index.php" method="get">
+        <form class="filter-bar filter-bar-advanced marketplace-filter" action="index.php" method="get">
             <input type="hidden" name="page" value="projects">
             <label class="filter-wide">
                 <span>Іздеу</span>
@@ -83,14 +88,43 @@ $budgetMax = $filters['budget_max'] ?? null;
                 <span>Сорттау</span>
                 <select name="sort">
                     <option value="latest" <?= $sort === 'latest' ? 'selected' : '' ?>>Ұсынылған</option>
+                    <option value="activity" <?= $sort === 'activity' ? 'selected' : '' ?>>Белсенді</option>
+                    <option value="views_high" <?= $sort === 'views_high' ? 'selected' : '' ?>>Көп қаралған</option>
                     <option value="budget_high" <?= $sort === 'budget_high' ? 'selected' : '' ?>>Бюджет жоғары</option>
                     <option value="budget_low" <?= $sort === 'budget_low' ? 'selected' : '' ?>>Бюджет төмен</option>
                     <option value="deadline_soon" <?= $sort === 'deadline_soon' ? 'selected' : '' ?>>Мерзімі жақын</option>
                     <option value="proposals_low" <?= $sort === 'proposals_low' ? 'selected' : '' ?>>Отклик аз</option>
                 </select>
             </label>
+            <div class="filter-switches">
+                <label class="check-card">
+                    <input type="checkbox" name="is_remote" value="1" <?= $isRemote ? 'checked' : '' ?>>
+                    <span>Remote</span>
+                </label>
+                <label class="check-card">
+                    <input type="checkbox" name="is_urgent" value="1" <?= $isUrgent ? 'checked' : '' ?>>
+                    <span>Жедел</span>
+                </label>
+                <label class="check-card">
+                    <input type="checkbox" name="verified_client" value="1" <?= $verifiedClient ? 'checked' : '' ?>>
+                    <span>Verified client</span>
+                </label>
+            </div>
             <button class="btn btn-primary" type="submit">Табу</button>
         </form>
+
+        <?php if ($user && ($user['role'] ?? '') !== 'owner'): ?>
+            <form class="saved-search-bar js-ajax-form" action="ajax.php" method="post">
+                <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                <input type="hidden" name="action" value="saved_search_create">
+                <input type="hidden" name="query_string" value="<?= e($currentQueryString) ?>">
+                <label>
+                    <span>Іздеуді сақтау</span>
+                    <input type="text" name="label" maxlength="120" placeholder="Мысалы: CRM жобалары, remote, middle">
+                </label>
+                <button class="btn btn-small" type="submit">Сақтау</button>
+            </form>
+        <?php endif; ?>
     </div>
 </section>
 
@@ -98,12 +132,19 @@ $budgetMax = $filters['budget_max'] ?? null;
     <div class="container project-list">
         <?php if (!empty($projects)): ?>
             <?php foreach ($projects as $project): ?>
-                <article class="project-row">
+                <?php $projectId = (int) $project['id']; ?>
+                <article class="project-row enhanced-project-row">
                     <div class="project-main">
                         <div class="project-meta">
                             <span><?= e($project['category_name']) ?></span>
                             <span><?= e(project_type_label((string) $project['project_type'])) ?></span>
                             <span><?= e(experience_level_label((string) $project['experience_level'])) ?></span>
+                            <?php if (!empty($project['client_is_verified'])): ?>
+                                <span class="badge-trust">Verified client</span>
+                            <?php endif; ?>
+                            <?php if (!empty($project['is_remote'])): ?>
+                                <span>Remote</span>
+                            <?php endif; ?>
                             <?php if (!empty($project['is_featured'])): ?>
                                 <span class="badge-featured">Таңдаулы</span>
                             <?php endif; ?>
@@ -118,11 +159,13 @@ $budgetMax = $filters['budget_max'] ?? null;
                                 <span><?= e($skill) ?></span>
                             <?php endforeach; ?>
                         </div>
-                        <div class="project-footer">
+                        <div class="project-footer project-metrics-line">
                             <strong><?= e(format_money($project['budget_min'])) ?> - <?= e(format_money($project['budget_max'])) ?></strong>
                             <span><?= (int) $project['deadline_days'] ?> күн</span>
                             <span><?= e($project['location'] ?: ($project['client_city'] ?? 'Қазақстан')) ?></span>
                             <span><?= (int) $project['proposals_count'] ?> ұсыныс</span>
+                            <span><?= (int) ($project['views_count'] ?? 0) ?> views</span>
+                            <span><?= (int) ($project['saved_count'] ?? 0) ?> saved</span>
                         </div>
                     </div>
                     <aside class="proposal-box">
@@ -130,11 +173,19 @@ $budgetMax = $filters['budget_max'] ?? null;
                             <span>Тапсырыс беруші</span>
                             <strong><?= e($project['client_name']) ?></strong>
                         </div>
+                        <?php if ($user && ($user['role'] ?? '') !== 'owner'): ?>
+                            <form class="save-project-form js-ajax-form" action="ajax.php" method="post">
+                                <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                <input type="hidden" name="action" value="project_save_toggle">
+                                <input type="hidden" name="project_id" value="<?= $projectId ?>">
+                                <button class="btn btn-small btn-ghost" type="submit"><?= in_array($projectId, $savedIds, true) ? 'Сақталған' : 'Сақтау' ?></button>
+                            </form>
+                        <?php endif; ?>
                         <?php if ($user && ($user['role'] ?? '') !== 'owner' && (int) $user['id'] !== (int) $project['client_id']): ?>
                             <form class="form mini js-ajax-form" action="ajax.php" method="post">
                                 <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
                                 <input type="hidden" name="action" value="proposal_create">
-                                <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                                <input type="hidden" name="project_id" value="<?= $projectId ?>">
                                 <label>
                                     <span>Ұсыныс</span>
                                     <textarea name="cover_letter" rows="4" required minlength="20" placeholder="Тәжірибеңізді, шешіміңізді және бірінші қадамды жазыңыз"></textarea>
@@ -153,7 +204,7 @@ $budgetMax = $filters['budget_max'] ?? null;
                             </form>
                         <?php elseif ($user && (int) $user['id'] === (int) $project['client_id']): ?>
                             <p class="muted">Бұл сіздің жобаңыз. Келген откликтер кабинетте басқарылады.</p>
-                            <a class="btn btn-small" href="<?= e(url_for('project-create')) ?>">Жаңа жоба</a>
+                            <a class="btn btn-small" href="<?= e(url_for('dashboard')) ?>">Кабинет</a>
                         <?php elseif ($user && ($user['role'] ?? '') === 'owner'): ?>
                             <p class="muted">Owner аккаунты басқаруға арналған.</p>
                             <a class="btn btn-small" href="owner.php">Owner panel</a>

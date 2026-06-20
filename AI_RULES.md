@@ -1,9 +1,9 @@
 # AI_RULES.md
 
 Project: QazJumys
-Version: 1.2.0
+Version: 1.3.0
 Author: Beck Sarbassov
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 ## Read Before Editing
 
@@ -23,6 +23,8 @@ Before code changes, read:
 - Keep private logic in `app`.
 - Keep uploads in `storage/uploads`.
 - Keep database access inside repositories.
+- Keep project/proposal workflow in `ProjectRepository.php`.
+- Keep saved items, milestones, reviews, portfolio, and verification logic in `EngagementRepository.php`.
 
 ## Coding Rules
 
@@ -31,6 +33,7 @@ Before code changes, read:
 - Validate server-side input.
 - Escape HTML output with `e()`.
 - Keep comments useful and brief.
+- Do not add unnecessary dependencies.
 
 ## Security Rules
 
@@ -39,6 +42,7 @@ Before code changes, read:
 - Keep CSRF on all state-changing POST actions.
 - Do not allow direct public upload access.
 - Do not store plaintext passwords.
+- Validate upload type/size and keep downloads behind `download.php`.
 
 ## Documentation Rules
 
@@ -66,7 +70,7 @@ Run:
 C:\OSPanel\modules\php\PHP_8.1\php.exe tests\run.php
 ```
 
-Also verify local OpenServer pages after database import.
+Also verify local OpenServer pages after database import or upgrade.
 
 ## Final Report Format
 
@@ -81,5 +85,5 @@ Report:
 
 Автор: Beck Sarbassov
 Дата создания: 2026-06-16
-Последнее обновление: 2026-06-16
+Последнее обновление: 2026-06-21
 Авторские права: © Beck Sarbassov. Все права защищены.

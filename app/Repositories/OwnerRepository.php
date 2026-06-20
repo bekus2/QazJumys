@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: OwnerRepository.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Provides owner dashboard statistics, moderation lists, and account management actions.
- * RU: Предоставляет статистику owner-панели, списки модерации и действия управления аккаунтами.
+ * EN: Provides owner dashboard statistics, moderation lists, verification queues, and account management actions.
+ * RU: Предоставляет статистику owner-панели, списки модерации, очереди верификации и действия управления аккаунтами.
  */
 
 declare(strict_types=1);
@@ -44,6 +44,10 @@ final class OwnerRepository
                 (SELECT COUNT(*) FROM proposals) AS proposals_total,
                 (SELECT COUNT(*) FROM messages) AS messages_total,
                 (SELECT COUNT(*) FROM project_files) AS files_total,
+                (SELECT COUNT(*) FROM saved_projects) AS saved_projects_total,
+                (SELECT COUNT(*) FROM reviews) AS reviews_total,
+                (SELECT COUNT(*) FROM portfolio_items) AS portfolio_items_total,
+                (SELECT COUNT(*) FROM verification_requests WHERE status = "pending") AS verification_pending,
                 (SELECT COUNT(*) FROM complaints WHERE status IN ("open", "reviewing")) AS complaints_open,
                 (SELECT COALESCE(SUM(budget_max), 0) FROM projects WHERE status = "completed") AS completed_budget
              '
@@ -61,6 +65,10 @@ final class OwnerRepository
             'proposals_total' => (int) ($stats['proposals_total'] ?? 0),
             'messages_total' => (int) ($stats['messages_total'] ?? 0),
             'files_total' => (int) ($stats['files_total'] ?? 0),
+            'saved_projects_total' => (int) ($stats['saved_projects_total'] ?? 0),
+            'reviews_total' => (int) ($stats['reviews_total'] ?? 0),
+            'portfolio_items_total' => (int) ($stats['portfolio_items_total'] ?? 0),
+            'verification_pending' => (int) ($stats['verification_pending'] ?? 0),
             'complaints_open' => (int) ($stats['complaints_open'] ?? 0),
             'completed_budget' => (float) ($stats['completed_budget'] ?? 0),
         ];
@@ -78,7 +86,10 @@ final class OwnerRepository
         $statement = $this->pdo->prepare(
             'SELECT u.*,
                     (SELECT COUNT(*) FROM projects p WHERE p.client_id = u.id) AS projects_count,
-                    (SELECT COUNT(*) FROM proposals pr WHERE pr.freelancer_id = u.id) AS proposals_count
+                    (SELECT COUNT(*) FROM proposals pr WHERE pr.freelancer_id = u.id) AS proposals_count,
+                    (SELECT COUNT(*) FROM portfolio_items pi WHERE pi.user_id = u.id) AS portfolio_count,
+                    (SELECT COUNT(*) FROM reviews r WHERE r.reviewee_id = u.id) AS reviews_received,
+                    (SELECT vr.status FROM verification_requests vr WHERE vr.user_id = u.id ORDER BY vr.created_at DESC LIMIT 1) AS verification_status
              FROM users u
              ORDER BY u.role = "owner" DESC, u.status = "blocked" DESC, u.created_at DESC
              LIMIT :limit'

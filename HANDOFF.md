@@ -1,13 +1,13 @@
 # HANDOFF.md
 
 Project: QazJumys
-Version: 1.2.0
+Version: 1.3.0
 Author: Beck Sarbassov
-Last updated: 2026-06-16
+Last updated: 2026-06-21
 
 ## What This Project Is
 
-QazJumys is a plain PHP 8.1 freelance marketplace for digital work. It now supports unified member accounts, publishing projects, submitting/accepting proposals, completing work, participant messaging, protected uploads, complaints, notifications, and a protected owner panel at `public/owner.php`.
+QazJumys is a plain PHP 8.1 freelance marketplace for digital work. It supports unified member accounts, project publishing, proposals, shortlist/accept/withdraw/decline, project cancellation, milestones, work submission/completion, reviews, portfolio, saved projects/searches, verification requests, participant messaging, protected uploads, complaints, notifications, and a protected owner panel at `public/owner.php`.
 
 ## Technologies
 
@@ -23,9 +23,10 @@ QazJumys is a plain PHP 8.1 freelance marketplace for digital work. It now suppo
 - `public/ajax.php` - CSRF-protected state-changing actions.
 - `public/owner.php` - owner administration panel.
 - `public/download.php` - protected file download endpoint.
+- `app/Repositories/ProjectRepository.php` - project/proposal workflow.
+- `app/Repositories/EngagementRepository.php` - saved items, milestones, reviews, portfolio, verification.
 - `app/Core/Auth.php`, `Csrf.php`, `Database.php`, `Upload.php` - security and infrastructure.
-- `app/Repositories/*Repository.php` - database logic.
-- `database/schema.sql`, `seed.sql`, `demo.sql`, `upgrade_1_2_0.sql` - database setup.
+- `database/schema.sql`, `seed.sql`, `demo.sql`, `upgrade_1_3_0.sql` - database setup.
 - `.env.example` - configuration template.
 
 ## Install and Run
@@ -38,7 +39,7 @@ QazJumys is a plain PHP 8.1 freelance marketplace for digital work. It now suppo
 
 ## Deployment
 
-Use `public` as document root. Keep `app`, `database`, `storage`, `.env`, logs, and backups outside public access. Set production `.env`, create a `utf8mb4_unicode_ci` database, import SQL, and make `storage/uploads`, `storage/logs`, `storage/cache` writable.
+Use `public` as document root. Keep `app`, `database`, `storage`, `.env`, logs, and backups outside public access. Set production `.env`, create a `utf8mb4_unicode_ci` database, import `schema.sql` and `seed.sql`, and make `storage/uploads`, `storage/logs`, `storage/cache` writable. Change the owner password after first login.
 
 ## Do Not Change Casually
 
@@ -46,17 +47,18 @@ Use `public` as document root. Keep `app`, `database`, `storage`, `.env`, logs, 
 - CSRF validation in `ajax.php`.
 - Upload validation and storage path in `Upload.php`.
 - Workflow transitions in `ProjectRepository.php`.
+- Engagement permission checks in `EngagementRepository.php`.
 - Owner-only checks in `owner.php` and owner AJAX handlers.
 
 ## Remaining Improvements
 
-- Password self-change and forced reset screen.
-- SMTP provider integration instead of PHP `mail()`.
+- SMTP provider API integration instead of PHP `mail()`.
 - Payment/escrow module.
-- Reviews and dispute evidence workflow.
+- Richer dispute evidence workflow.
 - Pagination/search inside owner tables.
+- Notification queue for high-volume production use.
 
 Автор: Beck Sarbassov
 Дата создания: 2026-06-16
-Последнее обновление: 2026-06-16
+Последнее обновление: 2026-06-21
 Авторские права: © Beck Sarbassov. Все права защищены.

@@ -1,5 +1,63 @@
 # Codex_History.md
 
+## 2026-06-21 — v1.3.0
+
+### Краткое
+Проект усилен до более полноценного marketplace workflow: добавлены сохраненные проекты и поиски, shortlist/withdraw/cancel, milestones, reviews, portfolio, verification queue, смена пароля, расширенная owner-статистика, demo-data и улучшенная адаптивная верстка.
+
+### Измененные файлы
+- `app/Repositories/ProjectRepository.php`
+- `app/Repositories/UserRepository.php`
+- `app/Repositories/OwnerRepository.php`
+- `app/Repositories/EngagementRepository.php`
+- `app/Views/projects.php`
+- `app/Views/dashboard.php`
+- `app/Views/profile.php`
+- `public/ajax.php`
+- `public/index.php`
+- `public/owner.php`
+- `public/assets/css/style.css`
+- `database/schema.sql`
+- `database/seed.sql`
+- `database/demo.sql`
+- `database/upgrade_1_3_0.sql`
+- `tests/run.php`
+- `README.md`
+- `HANDOFF.md`
+- `PROJECT_CONTEXT.md`
+- `TASK.md`
+- `AI_RULES.md`
+
+### Добавлено
+- Сохранение проектов.
+- Сохранение поисковых фильтров.
+- Метрики просмотров и активности проектов.
+- Shortlist откликов.
+- Отзыв отклика исполнителем.
+- Отмена проекта до завершения.
+- Milestones и закрытие milestones.
+- Reviews после завершенных проектов.
+- Portfolio items в профиле.
+- Заявки на верификацию профиля.
+- Owner approve/reject для верификации.
+- Смена пароля в профиле.
+- Расширенная owner-статистика по saved/reviews/portfolio/verification.
+- Demo SQL для новых функций.
+
+### Исправлено
+- Расширен workflow откликов и проектов, чтобы процесс не заканчивался только приемом заявки.
+- Dashboard и профиль теперь показывают больше практических действий без ручного перехода по скрытым состояниям.
+- Улучшены мобильные сетки фильтров, карточек проектов, профильных панелей и owner-таблиц.
+
+### Безопасность
+- Новые действия идут через `ajax.php`, CSRF, session checks и repository permission checks.
+- Смена пароля проверяет текущий пароль и сохраняет новый через `password_hash()`.
+- Verification moderation доступна только owner.
+- SQL-запросы новых функций используют prepared statements.
+
+### Примечания
+- Платежи/escrow, внешний SMTP API и расширенный dispute evidence workflow остаются следующими крупными этапами.
+
 ## 2026-06-16 — v1.2.0
 
 ### Краткое

@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: dashboard.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Unified private dashboard for publishing projects, sending proposals, messaging, uploads, and work completion.
- * RU: Единый личный кабинет для публикации проектов, откликов, сообщений, файлов и завершения работы.
+ * EN: Unified private dashboard for publishing projects, proposals, saved work, milestones, reviews, messaging, uploads, and work completion.
+ * RU: Единый личный кабинет для публикации проектов, откликов, сохранений, milestones, отзывов, сообщений, файлов и завершения работы.
  */
 
 $isOwner = ($user['role'] ?? '') === 'owner';
@@ -68,6 +68,22 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                 <span>Уведомления</span>
                 <strong><?= (int) $dashboardStats['unread_notifications'] ?></strong>
             </div>
+            <div class="stat-card">
+                <span>Сақталған жобалар</span>
+                <strong><?= (int) $dashboardStats['saved_projects'] ?></strong>
+            </div>
+            <div class="stat-card">
+                <span>Сақталған іздеу</span>
+                <strong><?= (int) $dashboardStats['saved_searches'] ?></strong>
+            </div>
+            <div class="stat-card">
+                <span>Portfolio</span>
+                <strong><?= (int) $dashboardStats['portfolio_items'] ?></strong>
+            </div>
+            <div class="stat-card">
+                <span>Review күтіп тұр</span>
+                <strong><?= (int) $dashboardStats['pending_reviews'] ?></strong>
+            </div>
         </div>
     </section>
 
@@ -98,6 +114,8 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                         </div>
                         <div class="project-footer">
                             <strong><?= e(format_money($project['budget_min'])) ?> - <?= e(format_money($project['budget_max'])) ?></strong>
+                            <span><?= (int) ($project['views_count'] ?? 0) ?> views</span>
+                            <span><?= (int) ($project['saved_count'] ?? 0) ?> saved</span>
                             <?php if (in_array((string) $project['status'], ['in_progress', 'submitted'], true)): ?>
                                 <form class="inline-form js-ajax-form" action="ajax.php" method="post">
                                     <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
@@ -106,7 +124,29 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                                     <button class="btn btn-small" type="submit">Аяқтау</button>
                                 </form>
                             <?php endif; ?>
+                            <?php if (!in_array((string) $project['status'], ['completed', 'cancelled'], true)): ?>
+                                <form class="inline-form js-ajax-form" action="ajax.php" method="post">
+                                    <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                    <input type="hidden" name="action" value="project_cancel">
+                                    <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                                    <button class="btn btn-small btn-ghost" type="submit">Тоқтату</button>
+                                </form>
+                            <?php endif; ?>
                         </div>
+                        <form class="form mini milestone-inline js-ajax-form" action="ajax.php" method="post">
+                            <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                            <input type="hidden" name="action" value="milestone_create">
+                            <input type="hidden" name="project_id" value="<?= (int) $project['id'] ?>">
+                            <label>
+                                <span>Milestone</span>
+                                <input type="text" name="title" minlength="3" maxlength="160" placeholder="Мысалы: дизайн бекіту">
+                            </label>
+                            <label>
+                                <span>Due</span>
+                                <input type="date" name="due_date">
+                            </label>
+                            <button class="btn btn-small" type="submit">Қосу</button>
+                        </form>
                         <form class="form mini upload-inline js-ajax-form" action="ajax.php" method="post" enctype="multipart/form-data">
                             <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
                             <input type="hidden" name="action" value="file_upload">
@@ -168,6 +208,14 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                         <div class="proposal-summary action-stack">
                             <strong><?= e(format_money($proposal['bid_amount'])) ?></strong>
                             <?php if (in_array((string) $proposal['status'], ['sent', 'shortlisted'], true) && $proposal['project_status'] === 'open'): ?>
+                                <?php if ((string) $proposal['status'] === 'sent'): ?>
+                                    <form class="js-ajax-form" action="ajax.php" method="post">
+                                        <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                        <input type="hidden" name="action" value="proposal_shortlist">
+                                        <input type="hidden" name="proposal_id" value="<?= (int) $proposal['id'] ?>">
+                                        <button class="btn btn-small" type="submit">Shortlist</button>
+                                    </form>
+                                <?php endif; ?>
                                 <form class="js-ajax-form" action="ajax.php" method="post">
                                     <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
                                     <input type="hidden" name="action" value="proposal_accept">
@@ -243,6 +291,14 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                                     <button class="btn btn-small btn-primary" type="submit">Тапсыру</button>
                                 </form>
                             <?php endif; ?>
+                            <?php if (in_array((string) $proposal['status'], ['sent', 'shortlisted'], true)): ?>
+                                <form class="js-ajax-form" action="ajax.php" method="post">
+                                    <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                    <input type="hidden" name="action" value="proposal_withdraw">
+                                    <input type="hidden" name="proposal_id" value="<?= (int) $proposal['id'] ?>">
+                                    <button class="btn btn-small btn-ghost" type="submit">Қайтару</button>
+                                </form>
+                            <?php endif; ?>
                             <form class="form mini message-inline js-ajax-form" action="ajax.php" method="post">
                                 <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
                                 <input type="hidden" name="action" value="message_send">
@@ -270,6 +326,112 @@ $isOwner = ($user['role'] ?? '') === 'owner';
 
     <section class="section band">
         <div class="container dashboard-ops-grid">
+            <div class="panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Saved</span>
+                    <h2>Сақталған жобалар</h2>
+                </div>
+                <?php if (!empty($savedProjects)): ?>
+                    <div class="mini-list">
+                        <?php foreach ($savedProjects as $savedProject): ?>
+                            <div>
+                                <strong><?= e($savedProject['title']) ?></strong>
+                                <p><?= e($savedProject['category_name']) ?> · <?= e(format_money($savedProject['budget_min'])) ?> - <?= e(format_money($savedProject['budget_max'])) ?></p>
+                                <span><?= (int) $savedProject['proposals_count'] ?> ұсыныс · <?= e(project_status_label((string) $savedProject['status'])) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted">Сақталған жобалар жоқ.</p>
+                <?php endif; ?>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Searches</span>
+                    <h2>Сақталған іздеулер</h2>
+                </div>
+                <?php if (!empty($savedSearches)): ?>
+                    <div class="mini-list">
+                        <?php foreach ($savedSearches as $savedSearch): ?>
+                            <div>
+                                <strong><?= e($savedSearch['label']) ?></strong>
+                                <p><a href="index.php?<?= e($savedSearch['query_string']) ?>">Іздеуді ашу</a></p>
+                                <span><?= e($savedSearch['created_at']) ?></span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted">Сақталған іздеу жоқ.</p>
+                <?php endif; ?>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Milestones</span>
+                    <h2>Жұмыс кезеңдері</h2>
+                </div>
+                <?php if (!empty($milestones)): ?>
+                    <div class="mini-list">
+                        <?php foreach ($milestones as $milestone): ?>
+                            <div>
+                                <strong><?= e($milestone['title']) ?></strong>
+                                <p><?= e($milestone['project_title']) ?></p>
+                                <span><?= e($milestone['status']) ?> · <?= e($milestone['due_date'] ?? 'no due date') ?></span>
+                                <?php if (($milestone['status'] ?? '') === 'planned'): ?>
+                                    <form class="js-ajax-form" action="ajax.php" method="post">
+                                        <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                        <input type="hidden" name="action" value="milestone_complete">
+                                        <input type="hidden" name="milestone_id" value="<?= (int) $milestone['id'] ?>">
+                                        <button class="btn btn-small" type="submit">Done</button>
+                                    </form>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted">Milestone әлі жоқ.</p>
+                <?php endif; ?>
+            </div>
+
+            <div class="panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Reviews</span>
+                    <h2>Пікір қалдыру</h2>
+                </div>
+                <?php if (!empty($pendingReviews)): ?>
+                    <div class="mini-list">
+                        <?php foreach ($pendingReviews as $reviewTarget): ?>
+                            <div>
+                                <strong><?= e($reviewTarget['project_title']) ?></strong>
+                                <p><?= e($reviewTarget['reviewee_name']) ?></p>
+                                <form class="form mini js-ajax-form" action="ajax.php" method="post">
+                                    <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                    <input type="hidden" name="action" value="review_create">
+                                    <input type="hidden" name="project_id" value="<?= (int) $reviewTarget['project_id'] ?>">
+                                    <input type="hidden" name="reviewee_id" value="<?= (int) $reviewTarget['reviewee_id'] ?>">
+                                    <label>
+                                        <span>Rating</span>
+                                        <select name="rating">
+                                            <?php for ($rating = 5; $rating >= 1; $rating--): ?>
+                                                <option value="<?= $rating ?>"><?= $rating ?></option>
+                                            <?php endfor; ?>
+                                        </select>
+                                    </label>
+                                    <label>
+                                        <span>Review</span>
+                                        <textarea name="comment" rows="3" minlength="10" maxlength="1200"></textarea>
+                                    </label>
+                                    <button class="btn btn-small" type="submit">Жіберу</button>
+                                </form>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <p class="muted">Қалдыру керек review жоқ.</p>
+                <?php endif; ?>
+            </div>
+
             <div class="panel">
                 <div class="section-heading">
                     <span class="eyebrow">Уведомления</span>

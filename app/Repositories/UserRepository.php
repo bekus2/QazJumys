@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: UserRepository.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Handles secure user persistence, lookup, unified member profiles, and account status.
- * RU: Отвечает за безопасное сохранение, поиск, единые профили участников и статус аккаунтов.
+ * EN: Handles secure user persistence, lookup, unified member profiles, password changes, and account status.
+ * RU: Отвечает за безопасное сохранение, поиск, единые профили участников, смену пароля и статус аккаунтов.
  */
 
 declare(strict_types=1);
@@ -133,6 +133,38 @@ final class UserRepository
         ]);
 
         return $this->find($id);
+    }
+
+    /**
+     * EN: Changes the current user's password after verifying the existing password hash.
+     * RU: Меняет пароль текущего пользователя после проверки существующего хеша пароля.
+     *
+     * @param int $id User id / ID пользователя
+     * @param string $currentPassword Current password / Текущий пароль
+     * @param string $newPassword New password / Новый пароль
+     * @return bool True when password was changed / true если пароль изменен
+     */
+    public function changePassword(int $id, string $currentPassword, string $newPassword): bool
+    {
+        $statement = $this->pdo->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+        $statement->execute(['id' => $id]);
+        $hash = (string) ($statement->fetchColumn() ?: '');
+
+        if ($hash === '' || !password_verify($currentPassword, $hash)) {
+            return false;
+        }
+
+        $update = $this->pdo->prepare(
+            'UPDATE users
+             SET password_hash = :hash, password_reset_required = 0, updated_at = NOW()
+             WHERE id = :id'
+        );
+        $update->execute([
+            'id' => $id,
+            'hash' => password_hash($newPassword, PASSWORD_DEFAULT),
+        ]);
+
+        return true;
     }
 
     /**

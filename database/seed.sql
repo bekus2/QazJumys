@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: seed.sql
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.3.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-21
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Seeds safe production-ready categories and the initial owner account.
- * RU: Заполняет безопасные production-ready категории и начальный owner-аккаунт.
+ * EN: Seeds safe production-ready categories and the initial owner account for v1.3.0.
+ * RU: Заполняет безопасные production-ready категории и начальный owner-аккаунт для v1.3.0.
  */
 
 USE qazjumys_portal;
