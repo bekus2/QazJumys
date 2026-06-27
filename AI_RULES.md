@@ -1,13 +1,13 @@
 # AI_RULES.md
 
 Project: QazJumys
-Version: 1.3.0
+Version: 1.4.0
 Author: Beck Sarbassov
-Last updated: 2026-06-21
+Last updated: 2026-06-28
 
 ## Read Before Editing
 
-Before code changes, read:
+Before changes, read:
 
 - `README.md`
 - `HANDOFF.md`
@@ -18,72 +18,59 @@ Before code changes, read:
 
 ## Architecture Rules
 
-- Keep plain PHP architecture unless a new framework is explicitly approved.
+- Keep the plain PHP architecture.
 - Keep public entry points in `public`.
-- Keep private logic in `app`.
+- Keep private application code in `app`.
 - Keep uploads in `storage/uploads`.
-- Keep database access inside repositories.
+- Keep database logic in repositories.
 - Keep project/proposal workflow in `ProjectRepository.php`.
-- Keep saved items, milestones, reviews, portfolio, and verification logic in `EngagementRepository.php`.
-
-## Coding Rules
-
-- Maintain professional file headers.
-- Use prepared statements for SQL.
-- Validate server-side input.
-- Escape HTML output with `e()`.
-- Keep comments useful and brief.
-- Do not add unnecessary dependencies.
+- Keep file visibility rules in `FileRepository.php`.
 
 ## Security Rules
 
-- Never commit `.env` or real secrets.
-- Keep owner-only actions behind `Auth::isOwner()`.
-- Keep CSRF on all state-changing POST actions.
-- Do not allow direct public upload access.
-- Do not store plaintext passwords.
-- Validate upload type/size and keep downloads behind `download.php`.
+- Never commit `.env`.
+- Never publish real passwords, tokens, API keys, SMTP passwords, or owner credentials in public docs.
+- Keep CSRF on all POST state changes.
+- Keep owner actions behind owner session checks.
+- Use prepared statements.
+- Validate uploads before storage.
+- Keep direct upload access denied.
+- Serve files only through `download.php`.
+- Preserve the split rules for `brief`, `proposal`, and `delivery` files.
+- Preserve blocked access for `declined` and `withdrawn` proposals.
+
+## Testing Rules
+
+Run the lightweight CI test before commit:
+
+```powershell
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\run.php
+```
+
+For local release readiness, also run:
+
+```powershell
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\db_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\workflow_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\http_smoke.php http://127.0.0.1:8014
+```
 
 ## Documentation Rules
 
-When behavior changes, update the relevant sections in:
+When code behavior changes, update README, HANDOFF, PROJECT_CONTEXT, Codex_History, TASK, and AI_RULES. Keep documentation practical and do not include private credentials.
 
-- `README.md`
-- `HANDOFF.md`
-- `PROJECT_CONTEXT.md`
-- `Codex_History.md`
-- `TASK.md`
-- `AI_RULES.md`
+## Git Rules
 
-## Git/GitHub Workflow
+- Inspect `git status` before staging.
+- Stage only intended files.
+- Commit code, tests, and docs together.
+- Push to the requested GitHub repository/branch after verification.
 
-- Work on a feature branch.
-- Run tests before committing.
-- Commit code and docs together.
-- Push branch and merge to `main` only after verification.
+## Final Report
 
-## Testing
+Report changed features, changed files, tests run, security notes, documentation updates, deployment notes, and remaining limitations.
 
-Run:
-
-```powershell
-C:\OSPanel\modules\php\PHP_8.1\php.exe tests\run.php
-```
-
-Also verify local OpenServer pages after database import or upgrade.
-
-## Final Report Format
-
-Report:
-
-1. What changed.
-2. Files changed.
-3. How to run/test.
-4. Security preserved or added.
-5. Documentation updated.
-6. Known limitations.
-
-Автор: Beck Sarbassov
-Дата создания: 2026-06-16
-Последнее обновление: 2026-06-21
-Авторские права: © Beck Sarbassov. Все права защищены.
+Author: Beck Sarbassov
+Created: 2026-06-16
+Last updated: 2026-06-28
+Copyright: © Beck Sarbassov. All rights reserved.

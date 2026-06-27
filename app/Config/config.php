@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: config.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Central configuration loaded from environment variables, including mail and upload limits.
@@ -19,7 +19,7 @@ return [
         'name' => (string) env_value('APP_NAME', 'QazJumys'),
         'env' => (string) env_value('APP_ENV', 'local'),
         'debug' => (bool) env_value('APP_DEBUG', false),
-        'url' => (string) env_value('APP_URL', 'http://127.0.0.1:8080'),
+        'url' => (string) env_value('APP_URL', 'http://127.0.0.1:8014'),
         'session_name' => (string) env_value('SESSION_NAME', 'qazjumys_session'),
         'mail_to' => (string) env_value('MAIL_TO', 'bek0435@gmail.com'),
         'mail_enabled' => (bool) env_value('MAIL_ENABLED', false),

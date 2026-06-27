@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: ProjectRepository.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Stores projects, proposal bids, workflow transitions, dashboard counters, activity metrics, and marketplace discovery data.
@@ -337,7 +337,9 @@ final class ProjectRepository
         $statement = $this->pdo->prepare(
             'SELECT p.id
              FROM projects p
-             LEFT JOIN proposals pr ON pr.project_id = p.id AND pr.freelancer_id = :proposal_user_id
+             LEFT JOIN proposals pr ON pr.project_id = p.id
+                AND pr.freelancer_id = :proposal_user_id
+                AND pr.status IN ("sent", "shortlisted", "accepted", "completed")
              WHERE p.id = :project_id
                AND (p.client_id = :client_user_id OR p.assigned_freelancer_id = :assigned_user_id OR pr.id IS NOT NULL)
              LIMIT 1'
@@ -347,6 +349,72 @@ final class ProjectRepository
             'proposal_user_id' => $userId,
             'client_user_id' => $userId,
             'assigned_user_id' => $userId,
+        ]);
+
+        return (bool) $statement->fetch();
+    }
+
+    /**
+     * EN: Checks whether two users may exchange messages on a project/proposal pair.
+     * RU: Проверяет, могут ли два пользователя обмениваться сообщениями по проекту/отклику.
+     *
+     * @param int $projectId Project id / ID проекта
+     * @param int|null $proposalId Optional proposal id / ID отклика
+     * @param int $senderId Sender user id / ID отправителя
+     * @param int $receiverId Receiver user id / ID получателя
+     * @return bool
+     */
+    public function canMessage(int $projectId, ?int $proposalId, int $senderId, int $receiverId): bool
+    {
+        if ($projectId <= 0 || $senderId <= 0 || $receiverId <= 0 || $senderId === $receiverId) {
+            return false;
+        }
+
+        if ($proposalId !== null) {
+            $statement = $this->pdo->prepare(
+                'SELECT pr.id
+                 FROM proposals pr
+                 INNER JOIN projects p ON p.id = pr.project_id
+                 WHERE pr.id = :proposal_id
+                   AND pr.project_id = :project_id
+                   AND pr.status IN ("sent", "shortlisted", "accepted", "completed")
+                   AND (
+                        (p.client_id = :sender_client_id AND pr.freelancer_id = :receiver_freelancer_id)
+                        OR
+                        (p.client_id = :receiver_client_id AND pr.freelancer_id = :sender_freelancer_id)
+                   )
+                 LIMIT 1'
+            );
+            $statement->execute([
+                'proposal_id' => $proposalId,
+                'project_id' => $projectId,
+                'sender_client_id' => $senderId,
+                'receiver_freelancer_id' => $receiverId,
+                'receiver_client_id' => $receiverId,
+                'sender_freelancer_id' => $senderId,
+            ]);
+
+            return (bool) $statement->fetch();
+        }
+
+        $statement = $this->pdo->prepare(
+            'SELECT id
+             FROM projects
+             WHERE id = :project_id
+               AND assigned_freelancer_id IS NOT NULL
+               AND (
+                    (client_id = :sender_client_id AND assigned_freelancer_id = :receiver_freelancer_id)
+                    OR
+                    (client_id = :receiver_client_id AND assigned_freelancer_id = :sender_freelancer_id)
+               )
+             LIMIT 1'
+        );
+        $statement->execute([
+            'project_id' => $projectId,
+            'sender_client_id' => $senderId,
+            'receiver_freelancer_id' => $receiverId,
+            'receiver_client_id' => $receiverId,
+            'sender_freelancer_id' => $senderId,
         ]);
 
         return (bool) $statement->fetch();
@@ -385,9 +453,10 @@ final class ProjectRepository
             'bid_amount' => $data['bid_amount'],
             'delivery_days' => (int) $data['delivery_days'],
         ]);
+        $proposalId = (int) $this->pdo->lastInsertId();
         $this->touchProjectActivity($projectId);
 
-        return (int) $this->pdo->lastInsertId();
+        return $proposalId;
     }
 
     /**
@@ -490,8 +559,16 @@ final class ProjectRepository
                 throw new RuntimeException('Отклик табылмады немесе сізге тиесілі емес.');
             }
 
-            if (!in_array((string) $proposal['project_status'], ['open', 'in_progress'], true)) {
+            if (!in_array((string) $proposal['status'], ['sent', 'shortlisted'], true)) {
+                throw new RuntimeException('Бұл отклик енді қабылдауға жарамайды.');
+            }
+
+            if ((string) $proposal['project_status'] !== 'open') {
                 throw new RuntimeException('Бұл жоба бойынша отклик қабылдау мүмкін емес.');
+            }
+
+            if (!empty($proposal['accepted_proposal_id']) || !empty($proposal['assigned_freelancer_id'])) {
+                throw new RuntimeException('Бұл жоба бойынша орындаушы бұрыннан қабылданған.');
             }
 
             $updateProposal = $this->pdo->prepare(
@@ -519,13 +596,17 @@ final class ProjectRepository
                      started_at = COALESCE(started_at, NOW()),
                      last_activity_at = NOW(),
                      updated_at = NOW()
-                 WHERE id = :project_id'
+                 WHERE id = :project_id AND status = "open" AND accepted_proposal_id IS NULL'
             );
             $updateProject->execute([
                 'proposal_id' => $proposalId,
                 'freelancer_id' => (int) $proposal['freelancer_id'],
                 'project_id' => (int) $proposal['project_id'],
             ]);
+
+            if ($updateProject->rowCount() < 1) {
+                throw new RuntimeException('Жоба күйі өзгерген. Откликті қайта қабылдау мүмкін емес.');
+            }
 
             $this->pdo->commit();
 
@@ -826,7 +907,7 @@ final class ProjectRepository
     private function proposalWithProjectForUpdate(int $proposalId): ?array
     {
         $statement = $this->pdo->prepare(
-            'SELECT pr.*, p.client_id, p.status AS project_status
+            'SELECT pr.*, p.client_id, p.status AS project_status, p.accepted_proposal_id, p.assigned_freelancer_id
              FROM proposals pr
              INNER JOIN projects p ON p.id = pr.project_id
              WHERE pr.id = :proposal_id

@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: index.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Front controller for public marketplace pages, engagement features, and unified account dashboards.
@@ -26,6 +26,14 @@ use QazJumys\Repositories\ProjectRepository;
 use QazJumys\Repositories\UserRepository;
 
 $config = require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'bootstrap.php';
+
+$requestPath = parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/';
+if (preg_match('#^/(?:\.env|app|database|storage|logs|backups)(?:/|$)#i', $requestPath)) {
+    http_response_code(404);
+    header('X-Content-Type-Options: nosniff');
+    echo 'Not found.';
+    exit;
+}
 
 $page = preg_replace('/[^a-z0-9-]/', '', (string) ($_GET['page'] ?? 'home')) ?: 'home';
 $user = Auth::user();

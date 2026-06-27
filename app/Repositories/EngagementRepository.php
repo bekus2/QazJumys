@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: EngagementRepository.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-21
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Stores marketplace engagement features such as saved projects, saved searches, milestones, reviews, portfolio items, and verification requests.
@@ -167,9 +167,10 @@ final class EngagementRepository
             'title' => $title,
             'due_date' => $dueDate ?: null,
         ]);
+        $milestoneId = (int) $this->pdo->lastInsertId();
         $this->touchProjectActivity($projectId);
 
-        return (int) $this->pdo->lastInsertId();
+        return $milestoneId;
     }
 
     /**

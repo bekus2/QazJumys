@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: run.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Lightweight CI test runner for PHP syntax, required docs, schema feature checks, and v1.3 engagement coverage.
- * RU: Легкий CI runner для проверки PHP-синтаксиса, обязательной документации, SQL-схемы и покрытия функций v1.3.
+ * EN: Lightweight CI test runner for syntax, required docs, schema checks, and v1.4 security/workflow coverage.
+ * RU: Легкий CI runner для синтаксиса, обязательной документации, SQL-схемы и покрытия security/workflow v1.4.
  */
 
 declare(strict_types=1);
@@ -91,6 +91,9 @@ foreach ([
 assert_check(is_file($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'owner.php'), 'owner.php is missing.');
 assert_check(is_file($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'download.php'), 'download.php is missing.');
 assert_check(is_file($root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'EngagementRepository.php'), 'EngagementRepository.php is missing.');
+assert_check(is_file($root . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'db_smoke.php'), 'db_smoke.php is missing.');
+assert_check(is_file($root . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'http_smoke.php'), 'http_smoke.php is missing.');
+assert_check(is_file($root . DIRECTORY_SEPARATOR . 'tests' . DIRECTORY_SEPARATOR . 'workflow_smoke.php'), 'workflow_smoke.php is missing.');
 
 $ajax = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'ajax.php');
 foreach ([
@@ -108,6 +111,33 @@ foreach ([
 ] as $action) {
     assert_check(str_contains($ajax, $action), 'ajax.php does not contain action: ' . $action);
 }
+
+$projectRepository = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'ProjectRepository.php');
+foreach ([
+    'public function canMessage(',
+    'pr.status IN ("sent", "shortlisted", "accepted", "completed")',
+    'accepted_proposal_id IS NULL',
+] as $needle) {
+    assert_check(str_contains($projectRepository, $needle), 'ProjectRepository.php does not contain required token: ' . $needle);
+}
+
+$fileRepository = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'Repositories' . DIRECTORY_SEPARATOR . 'FileRepository.php');
+foreach ([
+    'public function canAccess(',
+    'public function canUpload(',
+    'f.visibility = "delivery"',
+    'f.visibility = "proposal"',
+    'f.visibility = "brief"',
+] as $needle) {
+    assert_check(str_contains($fileRepository, $needle), 'FileRepository.php does not contain required token: ' . $needle);
+}
+
+$download = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . 'download.php');
+assert_check(str_contains($download, 'canAccess('), 'download.php must use FileRepository access checks.');
+
+$readme = (string) file_get_contents($root . DIRECTORY_SEPARATOR . 'README.md');
+assert_check(!str_contains($readme, '0123456789+Aa'), 'README.md must not expose the initial owner password.');
+assert_check(!str_contains($readme, 'Default Owner Account'), 'README.md must not publish owner credential block.');
 
 if ($failures !== []) {
     fwrite(STDERR, "QazJumys CI checks failed:\n- " . implode("\n- ", $failures) . "\n");

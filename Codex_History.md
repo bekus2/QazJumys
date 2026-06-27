@@ -1,5 +1,57 @@
 # Codex_History.md
 
+## 2026-06-28 — v1.4.0
+
+### Краткое
+Закрыт набор security/backend/install задач перед закрытым тестом: усилен приём откликов, исправлен возврат ID после создания отклика и milestone, разделены правила доступа к файлам, добавлены локальные DB/HTTP/workflow smoke-тесты, обновлена OpenServer установка и убран публичный блок owner credentials из README.
+
+### Измененные файлы
+- `.env.example`
+- `.htaccess`
+- `README.md`
+- `HANDOFF.md`
+- `PROJECT_CONTEXT.md`
+- `TASK.md`
+- `AI_RULES.md`
+- `app/Config/config.php`
+- `app/Repositories/ProjectRepository.php`
+- `app/Repositories/FileRepository.php`
+- `app/Repositories/EngagementRepository.php`
+- `app/Views/dashboard.php`
+- `public/ajax.php`
+- `public/download.php`
+- `public/index.php`
+- `public/.htaccess`
+- `tests/run.php`
+- `tests/db_smoke.php`
+- `tests/http_smoke.php`
+- `tests/workflow_smoke.php`
+
+### Добавлено
+- DB smoke-test для `.env`, расширений PHP, writable storage, таблиц и `utf8mb4_unicode_ci`.
+- HTTP smoke-test основных страниц, `/.env`, `/storage/uploads/` и `download.php`.
+- Workflow smoke-test полного процесса: publish, save, proposal, shortlist, decline, withdraw, accept, messages, files, submit, complete, reviews, portfolio, verification, complaint, block/unblock/reset.
+- `ProjectRepository::canMessage()` для проверки пары участников.
+- `FileRepository::canAccess()` и `FileRepository::canUpload()` для разделения `brief/proposal/delivery`.
+- UI-загрузка proposal-файла исполнителем.
+
+### Исправлено
+- `acceptProposal()` больше не принимает `withdrawn`, `declined`, `completed`, уже accepted или проект не в статусе `open`.
+- Повторный accept блокируется на уровне транзакции и SQL `WHERE`.
+- `declined` и `withdrawn` предложения больше не дают доступ к сообщениям и файлам.
+- `createProposal()` и `createMilestone()` сохраняют `lastInsertId()` до обновления активности проекта.
+- `download.php` больше не использует общий participant-доступ для всех типов файлов.
+
+### Безопасность
+- README больше не публикует пароль владельца.
+- `.env.example` использует `APP_DEBUG=false` и `MAIL_ENABLED=false`.
+- Upload authorization происходит до сохранения файла.
+- Private URL-префиксы `.env`, `app`, `database`, `storage`, `logs`, `backups` отрезаются в `index.php` и `.htaccess`.
+- Прямой доступ к uploads проверяется smoke-тестом.
+
+### Примечания
+- Payment/escrow, внешний SMTP provider и расширенный dispute evidence workflow остаются будущими задачами.
+
 ## 2026-06-21 — v1.3.0
 
 ### Краткое

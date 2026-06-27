@@ -1,94 +1,91 @@
 # TASK.md
 
 Project: QazJumys
-Current version: 1.3.0
+Current version: 1.4.0
 Author: Beck Sarbassov
-Last updated: 2026-06-21
+Last updated: 2026-06-28
 
 ## Objective
 
-Deliver a working PHP freelance marketplace with unified accounts, owner administration, messaging, uploads, notifications, complaints, engagement tools, reviews, verification, and automated tests/CI.
+Deliver a working PHP freelance marketplace with secure unified accounts, complete project/proposal workflow, messaging, protected file uploads/downloads, reviews, portfolio, verification, complaints, owner tools, and automated checks.
 
 ## Required Functionality
 
-- Public homepage and searchable project marketplace.
+- Public homepage and searchable projects.
 - Member registration/login.
-- Unified account: one member can publish projects and submit proposals.
-- Project creation and project dashboard.
-- Proposal submission, shortlist, withdrawal, acceptance, decline.
-- Workflow: open, in progress, submitted, completed, cancelled.
-- Project milestones.
-- Participant messaging.
-- Protected file upload/download.
-- Saved projects and saved searches.
-- Reviews and rating recalculation.
-- Portfolio items.
-- Verification request and owner moderation.
-- Password change from profile.
-- Complaint creation and owner moderation.
-- Notification records and email logs.
-- Owner panel at `public/owner.php`.
-- Automated test runner and GitHub Actions CI.
+- Unified member account for both publishing and performing.
+- Project create/search/save/cancel/complete.
+- Proposal create/shortlist/withdraw/decline/accept.
+- Strict acceptance: only active proposals on open projects can be accepted.
+- Messaging only between valid project/proposal participants.
+- Protected uploads split into `brief`, `proposal`, `delivery`.
+- Downloads only through `download.php`.
+- Saved searches, milestones, reviews, portfolio, verification requests.
+- Owner panel for statistics, complaints, verification, user block/unblock, password reset, project moderation, email logs, audit logs.
 
-## Pages and Modules
+## Pages And Modules
 
-- Home: `index.php?page=home`.
-- Projects: `index.php?page=projects`.
-- Register/login.
-- Dashboard.
-- Profile.
-- Project create.
-- Owner panel: `owner.php`.
-- Protected download: `download.php`.
-
-## User Roles
-
-- `member`: can publish projects, take jobs, save searches, maintain profile/portfolio, and request verification.
-- `owner`: can manage platform operations and moderation.
-
-## Admin / Owner Requirements
-
-Owner panel must show statistics, users, project workflow, complaints, verification requests, email logs, and audit logs. Owner can block/unblock accounts, reset passwords, approve/reject verification, update complaints, and moderate project statuses.
-
-## Backend Requirements
-
-- PHP 8.1.
-- PDO prepared statements.
-- CSRF protection.
-- Session authentication.
-- Server-side validation.
-- Private storage for uploads.
-- Repository-isolated SQL.
-
-## Database Requirements
-
-Use MySQL/MariaDB with `utf8mb4_unicode_ci`. Required tables are defined in `database/schema.sql`. Use `database/upgrade_1_3_0.sql` for upgrading from v1.2.0.
-
-## Email / Notifications
-
-Notifications are stored in the database. Email attempts are logged in `email_logs`. Set `MAIL_ENABLED=true` only after the hosting mail setup is confirmed.
-
-## SEO and Performance
-
-Public pages use semantic HTML, title/description metadata, Open Graph basics, responsive CSS, local assets, and mobile-first fallback grids.
+- `index.php?page=home`
+- `index.php?page=projects`
+- `index.php?page=register`
+- `index.php?page=login`
+- `index.php?page=project-create`
+- `index.php?page=dashboard`
+- `index.php?page=profile`
+- `owner.php`
+- `download.php`
 
 ## Security Requirements
 
-Protect `.env`, storage, logs, uploads, SQL dumps, and backups. Never expose secrets in public pages. Keep owner credentials only in README as initial local credentials and change them before production.
+- Keep `.env` out of Git and out of public web access.
+- Do not publish real passwords or owner credentials in public docs.
+- Use `APP_DEBUG=false` on staging/production.
+- Keep `MAIL_ENABLED=false` until mail is verified.
+- Require HTTPS in production.
+- Protect `storage/uploads` from direct browsing.
+- Validate upload MIME/size and visibility permission before storing.
+- Use CSRF on state-changing actions.
+- Use PDO prepared statements.
 
-## Acceptance Criteria
+## Installation Acceptance Criteria
 
-- `tests/run.php` passes.
-- Main pages return HTTP 200 locally.
-- Owner can log in to `owner.php`.
-- Member can publish project and submit proposal.
-- Project owner can shortlist, accept, decline, cancel, and complete work.
-- Performer can withdraw proposal, upload delivery, and submit work.
-- Users can save projects/searches, add portfolio, change password, request verification, and leave reviews.
-- Owner can manage complaints, verification, and user status.
-- Layout works on desktop, tablet, and mobile widths without horizontal overflow.
+- `.env` created from `.env.example`.
+- `APP_URL` matches the actual local launch path.
+- Database `qazjumys_portal` exists.
+- `schema.sql`, `seed.sql`, and local `demo.sql` import successfully.
+- Database collation is `utf8mb4_unicode_ci`.
+- PHP extensions `pdo_mysql`, `mbstring`, `fileinfo`, `session` are enabled.
+- Document root is `public`, or private folders are blocked by server rules.
+- `storage/uploads`, `storage/logs`, `storage/cache` are writable.
 
-Автор: Beck Sarbassov
-Дата создания: 2026-06-16
-Последнее обновление: 2026-06-21
-Авторские права: © Beck Sarbassov. Все права защищены.
+## Workflow Acceptance Criteria
+
+- Owner can open `owner.php`.
+- A client member can publish a project.
+- A performer member can find/save a project and submit a proposal.
+- Client can shortlist and accept the proposal.
+- Repeat accept and withdrawn/declined accept are blocked.
+- Client and performer can exchange messages.
+- Client can upload brief files.
+- Performer can upload proposal and delivery files.
+- Performer can submit delivery.
+- Client can complete the project.
+- Both sides can leave reviews.
+- Performer can create portfolio and request verification.
+- Owner can approve/reject verification.
+- Member can create complaint.
+- Owner can update complaint, block/unblock a test user, and reset a test user password.
+
+## Test Commands
+
+```powershell
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\run.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\db_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\workflow_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\http_smoke.php http://127.0.0.1:8014
+```
+
+Author: Beck Sarbassov
+Created: 2026-06-16
+Last updated: 2026-06-28
+Copyright: © Beck Sarbassov. All rights reserved.

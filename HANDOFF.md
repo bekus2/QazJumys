@@ -1,64 +1,73 @@
 # HANDOFF.md
 
 Project: QazJumys
-Version: 1.3.0
+Version: 1.4.0
 Author: Beck Sarbassov
-Last updated: 2026-06-21
+Last updated: 2026-06-28
 
 ## What This Project Is
 
-QazJumys is a plain PHP 8.1 freelance marketplace for digital work. It supports unified member accounts, project publishing, proposals, shortlist/accept/withdraw/decline, project cancellation, milestones, work submission/completion, reviews, portfolio, saved projects/searches, verification requests, participant messaging, protected uploads, complaints, notifications, and a protected owner panel at `public/owner.php`.
+QazJumys is a plain PHP freelance marketplace. A normal member account can publish projects and also submit proposals to other projects. The owner panel is located at `public/owner.php`.
 
 ## Technologies
 
-- PHP 8.1, PDO, sessions.
-- MySQL/MariaDB with `utf8mb4`.
-- HTML/CSS/JavaScript/jQuery.
-- OpenServer for local Windows launch.
-- GitHub Actions CI via `.github/workflows/ci.yml`.
+- PHP 8.1+; local OpenServer currently uses `C:\OSPanel\modules\PHP-8.4\php.exe`.
+- MariaDB/MySQL; local OpenServer currently uses `C:\OSPanel\modules\MariaDB-10.4\bin\mysql.exe`.
+- PDO, sessions, CSRF tokens, plain PHP views, CSS, JavaScript/jQuery.
+- MySQL/MariaDB charset/collation: `utf8mb4` / `utf8mb4_unicode_ci`.
 
 ## Important Files
 
 - `public/index.php` - public front controller.
-- `public/ajax.php` - CSRF-protected state-changing actions.
-- `public/owner.php` - owner administration panel.
+- `public/ajax.php` - POST actions with CSRF and permission checks.
+- `public/owner.php` - owner operations panel.
 - `public/download.php` - protected file download endpoint.
-- `app/Repositories/ProjectRepository.php` - project/proposal workflow.
+- `app/Repositories/ProjectRepository.php` - project/proposal workflow and messaging permissions.
+- `app/Repositories/FileRepository.php` - upload metadata plus `brief/proposal/delivery` access rules.
 - `app/Repositories/EngagementRepository.php` - saved items, milestones, reviews, portfolio, verification.
-- `app/Core/Auth.php`, `Csrf.php`, `Database.php`, `Upload.php` - security and infrastructure.
-- `database/schema.sql`, `seed.sql`, `demo.sql`, `upgrade_1_3_0.sql` - database setup.
-- `.env.example` - configuration template.
+- `database/schema.sql`, `seed.sql`, `demo.sql` - database setup.
+- `tests/run.php`, `db_smoke.php`, `http_smoke.php`, `workflow_smoke.php` - automated checks.
 
-## Install and Run
+## Install And Run
 
 1. Copy `.env.example` to `.env`.
-2. Import `database/schema.sql`, then `database/seed.sql`.
-3. Import `database/demo.sql` only for local demo data.
-4. Open the project through OpenServer or a web server pointing to `public`.
-5. Run checks with `C:\OSPanel\modules\php\PHP_8.1\php.exe tests\run.php`.
+2. For this OpenServer machine, use `APP_URL=http://127.0.0.1:8014` and `DB_HOST=127.0.1.14`.
+3. Import `database/schema.sql`, then `database/seed.sql`, then `database/demo.sql` only for local testing.
+4. Run from the project root:
 
-## Deployment
+```powershell
+& "C:\OSPanel\modules\PHP-8.4\php.exe" -S 127.0.0.1:8014 -t public
+```
 
-Use `public` as document root. Keep `app`, `database`, `storage`, `.env`, logs, and backups outside public access. Set production `.env`, create a `utf8mb4_unicode_ci` database, import `schema.sql` and `seed.sql`, and make `storage/uploads`, `storage/logs`, `storage/cache` writable. Change the owner password after first login.
+## Verification Commands
+
+```powershell
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\run.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\db_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\workflow_smoke.php
+& "C:\OSPanel\modules\PHP-8.4\php.exe" tests\http_smoke.php http://127.0.0.1:8014
+```
 
 ## Do Not Change Casually
 
-- Session/auth flow in `Auth.php`.
-- CSRF validation in `ajax.php`.
-- Upload validation and storage path in `Upload.php`.
-- Workflow transitions in `ProjectRepository.php`.
-- Engagement permission checks in `EngagementRepository.php`.
-- Owner-only checks in `owner.php` and owner AJAX handlers.
+- `ProjectRepository::acceptProposal()`, `isParticipant()`, and `canMessage()`.
+- `FileRepository::canUpload()` and `canAccess()`.
+- `public/ajax.php` CSRF/session checks.
+- `public/download.php` access checks.
+- `.env` secret handling and upload storage path.
+
+## Deployment Notes
+
+Use `public` as document root. If that is impossible, block direct web access to `.env`, `app`, `database`, `storage`, logs, backups, and SQL files. Keep uploads private and serve them only through `download.php`.
 
 ## Remaining Improvements
 
-- SMTP provider API integration instead of PHP `mail()`.
-- Payment/escrow module.
-- Richer dispute evidence workflow.
-- Pagination/search inside owner tables.
-- Notification queue for high-volume production use.
+- Payment/escrow.
+- External SMTP provider.
+- Rich dispute evidence workflow.
+- Owner table search/pagination.
 
-Автор: Beck Sarbassov
-Дата создания: 2026-06-16
-Последнее обновление: 2026-06-21
-Авторские права: © Beck Sarbassov. Все права защищены.
+Author: Beck Sarbassov
+Created: 2026-06-16
+Last updated: 2026-06-28
+Copyright: © Beck Sarbassov. All rights reserved.

@@ -1,9 +1,9 @@
 # Project: QazJumys
 # File: public/.htaccess
 # Author: Beck Sarbassov
-# Version: 1.1.0
+# Version: 1.4.0
 # Release Date: 2026-06-16
-# Last Updated: 2026-06-16
+# Last Updated: 2026-06-28
 # Copyright: © Beck Sarbassov. All rights reserved.
 #
 # EN: Protects directory listings and routes clean URLs to index.php.
@@ -11,6 +11,8 @@
 
 Options -Indexes
 RewriteEngine On
+
+RewriteRule ^(\.env|app|database|storage|logs|backups)(/|$) - [R=404,L,NC]
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

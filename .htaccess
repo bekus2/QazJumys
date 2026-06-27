@@ -1,9 +1,9 @@
 # Project: QazJumys
 # File: .htaccess
 # Author: Beck Sarbassov
-# Version: 1.1.0
+# Version: 1.4.0
 # Release Date: 2026-06-16
-# Last Updated: 2026-06-16
+# Last Updated: 2026-06-28
 # Copyright: © Beck Sarbassov. All rights reserved.
 #
 # EN: Routes shared-hosting requests into the public directory.
@@ -11,6 +11,8 @@
 
 Options -Indexes
 RewriteEngine On
+
+RewriteRule ^(\.env|app|database|storage|logs|backups)(/|$) - [R=404,L,NC]
 
 RewriteRule ^$ public/ [L]
 RewriteRule (.*) public/$1 [L]

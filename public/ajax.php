@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: ajax.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Handles AJAX actions for auth, projects, proposals, workflow, engagement tools, messages, uploads, complaints, and owner tools.
@@ -657,7 +657,7 @@ function handle_message_send(ProjectRepository $projects, MessageRepository $mes
         Response::json(['ok' => false, 'message' => 'Хабарлама мәтіні және алушы қажет.'], 422);
     }
 
-    if (!$projects->isParticipant($projectId, (int) $user['id']) || !$projects->isParticipant($projectId, $receiverId)) {
+    if (!$projects->canMessage($projectId, $proposalId, (int) $user['id'], $receiverId)) {
         Response::json(['ok' => false, 'message' => 'Бұл жоба бойынша хабарлама жіберуге рұқсат жоқ.'], 403);
     }
 
@@ -688,7 +688,7 @@ function handle_file_upload(ProjectRepository $projects, FileRepository $files, 
         $visibility = 'brief';
     }
 
-    if ($projectId <= 0 || !$projects->isParticipant($projectId, (int) $user['id'])) {
+    if (!$files->canUpload($projectId, $proposalId, (int) $user['id'], $visibility)) {
         Response::json(['ok' => false, 'message' => 'Файл жүктеуге рұқсат жоқ.'], 403);
     }
 

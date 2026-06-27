@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: download.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Serves protected project uploads after checking participant or owner access.
@@ -17,7 +17,6 @@ declare(strict_types=1);
 use QazJumys\Core\Auth;
 use QazJumys\Core\Database;
 use QazJumys\Repositories\FileRepository;
-use QazJumys\Repositories\ProjectRepository;
 
 $config = require dirname(__DIR__) . DIRECTORY_SEPARATOR . 'app' . DIRECTORY_SEPARATOR . 'bootstrap.php';
 $user = Auth::user();
@@ -30,7 +29,6 @@ if (!$user) {
 
 $pdo = Database::connection($config['database']);
 $files = new FileRepository($pdo);
-$projects = new ProjectRepository($pdo);
 $file = $files->find((int) ($_GET['id'] ?? 0));
 
 if (!$file) {
@@ -39,9 +37,7 @@ if (!$file) {
     exit;
 }
 
-$canAccess = Auth::isOwner()
-    || (int) $file['uploader_id'] === (int) $user['id']
-    || $projects->isParticipant((int) $file['project_id'], (int) $user['id']);
+$canAccess = $files->canAccess((int) $file['id'], (int) $user['id'], Auth::isOwner());
 
 if (!$canAccess) {
     http_response_code(403);

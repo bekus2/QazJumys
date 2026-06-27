@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: dashboard.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.4.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-06-28
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Unified private dashboard for publishing projects, proposals, saved work, milestones, reviews, messaging, uploads, and work completion.
@@ -266,6 +266,20 @@ $isOwner = ($user['role'] ?? '') === 'owner';
                                 <span><?= e(format_money($proposal['bid_amount'])) ?></span>
                                 <span><?= (int) $proposal['delivery_days'] ?> күн</span>
                             </div>
+                            <?php if (in_array((string) $proposal['status'], ['sent', 'shortlisted'], true) && (string) $proposal['project_status'] === 'open'): ?>
+                                <form class="form mini upload-inline js-ajax-form" action="ajax.php" method="post" enctype="multipart/form-data">
+                                    <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">
+                                    <input type="hidden" name="action" value="file_upload">
+                                    <input type="hidden" name="project_id" value="<?= (int) $proposal['project_id'] ?>">
+                                    <input type="hidden" name="proposal_id" value="<?= (int) $proposal['id'] ?>">
+                                    <input type="hidden" name="visibility" value="proposal">
+                                    <label>
+                                        <span>Proposal файлы</span>
+                                        <input type="file" name="project_file" required>
+                                    </label>
+                                    <button class="btn btn-small" type="submit">Жүктеу</button>
+                                </form>
+                            <?php endif; ?>
                             <?php if (in_array((string) $proposal['project_status'], ['in_progress', 'submitted'], true) && (int) $proposal['assigned_freelancer_id'] === (int) $user['id']): ?>
                                 <form class="form mini upload-inline js-ajax-form" action="ajax.php" method="post" enctype="multipart/form-data">
                                     <input type="hidden" name="_csrf" value="<?= e(\QazJumys\Core\Csrf::token()) ?>">

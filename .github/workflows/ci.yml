@@ -1,9 +1,9 @@
 # Project: QazJumys
 # File: ci.yml
 # Author: Beck Sarbassov
-# Version: 1.2.0
+# Version: 1.4.0
 # Release Date: 2026-06-16
-# Last Updated: 2026-06-16
+# Last Updated: 2026-06-28
 # Copyright: © Beck Sarbassov. All rights reserved.
 #
 # EN: GitHub Actions workflow for PHP syntax and project integrity checks.
