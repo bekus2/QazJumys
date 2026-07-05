@@ -1,9 +1,9 @@
 # AI_RULES.md
 
 Project: QazJumys
-Version: 1.4.0
+Version: 1.5.0
 Author: Beck Sarbassov
-Last updated: 2026-06-28
+Last updated: 2026-07-05
 
 ## Read Before Editing
 
@@ -29,7 +29,11 @@ Before changes, read:
 ## Security Rules
 
 - Never commit `.env`.
-- Never publish real passwords, tokens, API keys, SMTP passwords, or owner credentials in public docs.
+- Never publish real passwords, password hashes, tokens, API keys, SMTP passwords, personal contacts, or owner credentials in public docs, seed files, or config defaults.
+- Create/reset the owner only via `bin/create_owner.php`.
+- Keep login rate limiting (`RateLimiter` + `login_attempts`) on the login action.
+- Keep the database status re-check in `require_active_account()`.
+- Keep security headers in `app/bootstrap.php`.
 - Keep CSRF on all POST state changes.
 - Keep owner actions behind owner session checks.
 - Use prepared statements.
@@ -72,5 +76,5 @@ Report changed features, changed files, tests run, security notes, documentation
 
 Author: Beck Sarbassov
 Created: 2026-06-16
-Last updated: 2026-06-28
+Last updated: 2026-07-05
 Copyright: © Beck Sarbassov. All rights reserved.

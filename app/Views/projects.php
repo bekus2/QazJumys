@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: projects.php
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Displays searchable open projects with saved projects, saved searches, project metrics, and secure proposal forms.
- * RU: Показывает поиск открытых проектов с сохранением проектов, сохранением поиска, метриками и защищенными формами отклика.
+ * EN: Displays searchable open projects with pagination, saved projects, saved searches, project metrics, and secure proposal forms.
+ * RU: Показывает поиск открытых проектов с пагинацией, сохранением проектов, сохранением поиска, метриками и защищенными формами отклика.
  */
 
 $filters = $projectFilters ?? [];
@@ -25,6 +25,25 @@ $isUrgent = !empty($filters['is_urgent']);
 $verifiedClient = !empty($filters['verified_client']);
 $savedIds = array_map('intval', $savedProjectIds ?? []);
 $currentQueryString = $_SERVER['QUERY_STRING'] ?? 'page=projects';
+$resultsTotal = (int) ($projectsTotal ?? count($projects));
+$currentListPage = max(1, (int) ($projectsPage ?? 1));
+$perPage = max(1, (int) ($projectsPerPage ?? 20));
+$totalPages = max(1, (int) ceil($resultsTotal / $perPage));
+
+/**
+ * EN: Builds a projects page URL preserving current filters.
+ * RU: Формирует URL страницы проектов с сохранением текущих фильтров.
+ *
+ * @param int $pageNumber Target page number / Номер целевой страницы
+ * @return string
+ */
+$listPageUrl = static function (int $pageNumber): string {
+    $params = $_GET;
+    $params['page'] = 'projects';
+    $params['pg'] = $pageNumber;
+
+    return 'index.php?' . http_build_query($params);
+};
 ?>
 <section class="page-hero">
     <div class="container page-hero-grid">
@@ -34,7 +53,7 @@ $currentQueryString = $_SERVER['QUERY_STRING'] ?? 'page=projects';
             <p>Категория, бюджет, дағды, мерзім және сенім белгілері бойынша таңдаңыз. Бір аккаунтпен жоба жариялап та, басқа жобаларға ұсыныс жіберіп те жұмыс істей аласыз.</p>
         </div>
         <div class="page-stat">
-            <strong><?= count($projects) ?></strong>
+            <strong><?= $resultsTotal ?></strong>
             <span>нәтиже</span>
         </div>
     </div>
@@ -215,6 +234,17 @@ $currentQueryString = $_SERVER['QUERY_STRING'] ?? 'page=projects';
                     </aside>
                 </article>
             <?php endforeach; ?>
+            <?php if ($totalPages > 1): ?>
+                <nav class="pagination" aria-label="Беттер">
+                    <?php if ($currentListPage > 1): ?>
+                        <a class="btn btn-small btn-ghost" href="<?= e($listPageUrl($currentListPage - 1)) ?>">&larr; Алдыңғы</a>
+                    <?php endif; ?>
+                    <span class="muted"><?= $currentListPage ?> / <?= $totalPages ?> бет</span>
+                    <?php if ($currentListPage < $totalPages): ?>
+                        <a class="btn btn-small btn-ghost" href="<?= e($listPageUrl($currentListPage + 1)) ?>">Келесі &rarr;</a>
+                    <?php endif; ?>
+                </nav>
+            <?php endif; ?>
         <?php else: ?>
             <div class="empty-state">
                 <h2>Әзірге жоба табылмады</h2>

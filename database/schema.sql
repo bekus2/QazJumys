@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: schema.sql
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: MySQL schema for unified accounts, projects, proposals, saves, searches, portfolios, milestones, reviews, messaging, uploads, complaints, notifications, verification, and owner tools.
- * RU: MySQL-схема для единых аккаунтов, проектов, откликов, сохранений, поисков, портфолио, milestones, reviews, сообщений, файлов, жалоб, уведомлений, верификации и owner-инструментов.
+ * EN: MySQL schema for unified accounts, projects, proposals, saves, searches, portfolios, milestones, reviews, messaging, uploads, complaints, notifications, verification, login throttling, and owner tools.
+ * RU: MySQL-схема для единых аккаунтов, проектов, откликов, сохранений, поисков, портфолио, milestones, reviews, сообщений, файлов, жалоб, уведомлений, верификации, ограничения входа и owner-инструментов.
  */
 
 CREATE DATABASE IF NOT EXISTS qazjumys_portal
@@ -273,6 +273,17 @@ CREATE TABLE IF NOT EXISTS portfolio_items (
     created_at DATETIME NOT NULL,
     CONSTRAINT fk_portfolio_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_portfolio_user_created (user_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(180) NOT NULL,
+    ip_address VARCHAR(45) NOT NULL,
+    succeeded TINYINT(1) NOT NULL DEFAULT 0,
+    attempted_at DATETIME NOT NULL,
+    INDEX idx_login_attempts_email_time (email, attempted_at),
+    INDEX idx_login_attempts_ip_time (ip_address, attempted_at),
+    INDEX idx_login_attempts_time (attempted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS verification_requests (

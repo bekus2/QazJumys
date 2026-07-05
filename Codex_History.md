@@ -1,5 +1,61 @@
 # Codex_History.md
 
+## 2026-07-05 — v1.5.0
+
+### Краткое
+Security/quality релиз по итогам аудита кодовой базы: защита логина от перебора, мгновенное действие блокировок на открытые сессии, удаление хеша пароля владельца и личных контактов из репозитория (owner создается CLI-скриптом), security-заголовки, логирование ошибок, честный рейтинг без накрутки, пагинация поиска и реальные DB/workflow smoke-тесты в GitHub Actions.
+
+### Измененные файлы
+- `.env.example`
+- `.github/workflows/ci.yml`
+- `README.md`
+- `HANDOFF.md`
+- `PROJECT_CONTEXT.md`
+- `TASK.md`
+- `AI_RULES.md`
+- `Codex_History.md`
+- `LICENSE` (новый)
+- `bin/create_owner.php` (новый)
+- `app/bootstrap.php`
+- `app/Config/config.php`
+- `app/Core/RateLimiter.php` (новый)
+- `app/Repositories/ProjectRepository.php`
+- `app/Views/layout/footer.php`
+- `app/Views/projects.php`
+- `public/ajax.php`
+- `public/index.php`
+- `public/assets/css/style.css`
+- `database/schema.sql`
+- `database/seed.sql`
+- `database/upgrade_1_5_0.sql` (новый)
+- `tests/run.php`
+- `tests/db_smoke.php`
+
+### Добавлено
+- `RateLimiter` + таблица `login_attempts`: максимум 5 неудачных входов по email и 20 по IP за 15 минут (429 при превышении, fail-open с логированием при недоступности таблицы).
+- CLI-установщик владельца `bin/create_owner.php` — учетные данные больше не хранятся в git.
+- Security-заголовки на всех страницах: CSP, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy`.
+- `app_log()` — журнал ошибок в `storage/logs/app-YYYY-MM-DD.log` для `index.php` и `ajax.php`.
+- Пагинация поиска проектов: `searchOpen($filters, $limit, $offset)` + `countOpen()`, 20 на страницу, навигация в `projects.php`.
+- CI-джоба `db-workflow-checks`: MariaDB-сервис, импорт schema/seed, запуск `db_smoke.php` и `workflow_smoke.php`.
+- Файл `LICENSE` (proprietary).
+
+### Исправлено
+- `require_active_account()` перепроверяет статус и роль в базе — блокировка действует сразу, а не после logout.
+- `completeProject()` больше не увеличивает `reviews_count` и не накручивает рейтинг +0.02 без реального отзыва.
+- `%` и `_` в поисковом запросе экранируются перед LIKE.
+- Secure-флаг сессионной куки учитывает `X-Forwarded-Proto` за reverse-proxy.
+- Счетчик «нәтиже» на странице проектов показывает общее число результатов, а не размер страницы.
+
+### Безопасность
+- Из `seed.sql` удален bcrypt-хеш пароля владельца (опубликованный хеш считается скомпрометированным — пароль нужно сменить).
+- Из `config.php` и `.env.example` удалены реальные email и WhatsApp; footer скрывает пустые контакты.
+- Временный пароль при owner-сбросе больше не пишется в тело уведомления/письма.
+- `tests/run.php` теперь проверяет отсутствие `$2y$` и `INSERT INTO users` в seed, наличие RateLimiter, security-заголовков, логирования и отсутствие накрутки рейтинга.
+
+### Примечания
+- Остаются будущими задачами: payment/escrow, SMTP-провайдер, email-верификация регистрации, самостоятельный сброс пароля, `MATCH ... AGAINST`, пагинация owner-таблиц.
+
 ## 2026-06-28 — v1.4.0
 
 ### Краткое

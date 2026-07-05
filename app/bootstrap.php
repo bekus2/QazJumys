@@ -3,13 +3,13 @@
  * Project: QazJumys
  * File: bootstrap.php
  * Author: Beck Sarbassov
- * Version: 1.2.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-16
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Boots configuration, sessions, helpers, class loading, and shared display labels.
- * RU: Загружает конфигурацию, сессии, помощники, автозагрузку классов и общие подписи.
+ * EN: Boots configuration, sessions, security headers, logging, helpers, class loading, and shared display labels.
+ * RU: Загружает конфигурацию, сессии, security-заголовки, логирование, помощники, автозагрузку классов и общие подписи.
  */
 
 declare(strict_types=1);
@@ -94,8 +94,76 @@ spl_autoload_register(static function (string $class): void {
     }
 });
 
+/**
+ * EN: Detects HTTPS directly or behind a reverse proxy for secure cookies.
+ * RU: Определяет HTTPS напрямую или за reverse-proxy для secure-куки.
+ *
+ * @return bool
+ */
+function request_is_https(): bool
+{
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        return true;
+    }
+
+    return strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https';
+}
+
+/**
+ * EN: Sends baseline security headers for all web entry points.
+ * RU: Отправляет базовые security-заголовки для всех web-точек входа.
+ *
+ * @return void
+ */
+function send_security_headers(): void
+{
+    if (PHP_SAPI === 'cli' || headers_sent()) {
+        return;
+    }
+
+    header('X-Frame-Options: DENY');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+    header(
+        "Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+        . "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'; base-uri 'self'"
+    );
+}
+
+/**
+ * EN: Appends an application log line to storage/logs without exposing details to visitors.
+ * RU: Записывает строку журнала приложения в storage/logs без раскрытия деталей посетителям.
+ *
+ * @param string $message Log message / Сообщение журнала
+ * @param Throwable|null $exception Optional exception context / Контекст исключения
+ * @return void
+ */
+function app_log(string $message, ?Throwable $exception = null): void
+{
+    $directory = PROJECT_ROOT . DIRECTORY_SEPARATOR . 'storage' . DIRECTORY_SEPARATOR . 'logs';
+
+    if (!is_dir($directory)) {
+        @mkdir($directory, 0755, true);
+    }
+
+    $line = '[' . date('Y-m-d H:i:s') . '] ' . $message;
+
+    if ($exception !== null) {
+        $line .= ' :: ' . get_class($exception) . ': ' . $exception->getMessage()
+            . ' @ ' . $exception->getFile() . ':' . $exception->getLine();
+    }
+
+    @file_put_contents(
+        $directory . DIRECTORY_SEPARATOR . 'app-' . date('Y-m-d') . '.log',
+        $line . PHP_EOL,
+        FILE_APPEND | LOCK_EX
+    );
+}
+
+send_security_headers();
+
 if (session_status() !== PHP_SESSION_ACTIVE) {
-    $secure = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off');
+    $secure = request_is_https();
     session_name((string) $config['app']['session_name']);
     session_set_cookie_params([
         'lifetime' => 0,

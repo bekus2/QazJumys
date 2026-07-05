@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: index.php
  * Author: Beck Sarbassov
- * Version: 1.4.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-28
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Front controller for public marketplace pages, engagement features, and unified account dashboards.
@@ -62,6 +62,9 @@ $projectFilters = [
     'verified_client' => isset($_GET['verified_client']) ? 1 : 0,
     'sort' => $_GET['sort'] ?? 'latest',
 ];
+$projectsPage = max(1, (int) ($_GET['pg'] ?? 1));
+$projectsPerPage = 20;
+$projectsTotal = 0;
 $dashboardStats = ['projects' => 0, 'proposals' => 0, 'received_proposals' => 0, 'active_work' => 0, 'open_market' => 0, 'unread_messages' => 0, 'unread_notifications' => 0, 'saved_projects' => 0, 'saved_searches' => 0, 'portfolio_items' => 0, 'pending_reviews' => 0];
 $profile = $user;
 $myProjects = [];
@@ -101,7 +104,10 @@ try {
     }
 
     if ($page === 'projects') {
-        $projects = $projectRepository->searchOpen($projectFilters);
+        $projectsTotal = $projectRepository->countOpen($projectFilters);
+        $maxPage = max(1, (int) ceil($projectsTotal / $projectsPerPage));
+        $projectsPage = min($projectsPage, $maxPage);
+        $projects = $projectRepository->searchOpen($projectFilters, $projectsPerPage, ($projectsPage - 1) * $projectsPerPage);
         $projectRepository->recordImpressions(array_column($projects, 'id'));
 
         if ($user && ($user['role'] ?? '') !== 'owner') {
@@ -142,6 +148,7 @@ try {
         $verificationRequest = $engagementRepository->latestVerificationForUser((int) $user['id']);
     }
 } catch (Throwable $exception) {
+    app_log('index.php page load failed: page=' . $page, $exception);
     $dbNotice = 'MySQL баптауы аяқталмаған. .env файлын жасап, database/schema.sql және database/seed.sql импорттаңыз.';
 }
 
@@ -179,6 +186,9 @@ render_view($route['view'], [
     'recommendedProjects' => $recommendedProjects,
     'marketplaceStats' => $marketplaceStats,
     'projectFilters' => $projectFilters,
+    'projectsTotal' => $projectsTotal,
+    'projectsPage' => $projectsPage,
+    'projectsPerPage' => $projectsPerPage,
     'dashboardStats' => $dashboardStats,
     'profile' => $profile,
     'myProjects' => $myProjects,

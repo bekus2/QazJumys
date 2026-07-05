@@ -2,13 +2,13 @@
  * Project: QazJumys
  * File: seed.sql
  * Author: Beck Sarbassov
- * Version: 1.3.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-21
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
- * EN: Seeds safe production-ready categories and the initial owner account for v1.3.0.
- * RU: Заполняет безопасные production-ready категории и начальный owner-аккаунт для v1.3.0.
+ * EN: Seeds safe production-ready categories. The owner account is NOT seeded anymore: create it with `php bin/create_owner.php` so no credential hash is stored in the repository.
+ * RU: Заполняет безопасные production-ready категории. Owner-аккаунт больше НЕ создается из seed: используйте `php bin/create_owner.php`, чтобы хеш пароля не хранился в репозитории.
  */
 
 USE qazjumys_portal;
@@ -31,24 +31,4 @@ ON DUPLICATE KEY UPDATE
     accent_color = VALUES(accent_color),
     sort_order = VALUES(sort_order),
     is_active = VALUES(is_active),
-    updated_at = NOW();
-
-INSERT INTO users (
-    role, status, name, email, password_hash, city, headline, bio, skills,
-    hourly_rate, rating, reviews_count, completed_projects, response_time,
-    is_verified, password_reset_required, created_at, updated_at
-)
-VALUES (
-    'owner', 'active', 'Beck Sarbassov', 'bek0435@gmail.com',
-    '$2y$10$Ic0kEsuFv7cQaWnrOMbJFus/3nmKFXJJ2mo/taBBUCNRTJF01OHTW',
-    'Қазақстан', 'QazJumys owner', 'Сайт иесі және негізгі әкімші аккаунты.',
-    'owner, moderation, operations', NULL, 0.00, 0, 0, NULL, 1, 0, NOW(), NOW()
-)
-ON DUPLICATE KEY UPDATE
-    role = 'owner',
-    status = 'active',
-    name = VALUES(name),
-    headline = VALUES(headline),
-    bio = VALUES(bio),
-    is_verified = 1,
     updated_at = NOW();

@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: db_smoke.php
  * Author: Beck Sarbassov
- * Version: 1.4.0
+ * Version: 1.5.0
  * Release Date: 2026-06-28
- * Last Updated: 2026-06-28
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Local database and installation smoke test for OpenServer/hosting readiness.
@@ -89,6 +89,7 @@ try {
         'reviews',
         'portfolio_items',
         'verification_requests',
+        'login_attempts',
     ] as $table) {
         $pdo->query('SELECT COUNT(*) FROM `' . $table . '`');
     }
