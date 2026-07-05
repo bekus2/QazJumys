@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: ProjectRepository.php
  * Author: Beck Sarbassov
- * Version: 1.4.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-28
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Stores projects, proposal bids, workflow transitions, dashboard counters, activity metrics, and marketplace discovery data.
@@ -72,9 +72,78 @@ final class ProjectRepository
      * RU: Ищет открытые проекты по слову, категории, бюджету, типу, уровню опыта, статусным признакам и сортировке.
      *
      * @param array<string, mixed> $filters Search filters / Фильтры поиска
+     * @param int $limit Page size, 0 disables pagination / Размер страницы, 0 отключает пагинацию
+     * @param int $offset Result offset / Смещение результатов
      * @return array<int, array<string, mixed>>
      */
-    public function searchOpen(array $filters = []): array
+    public function searchOpen(array $filters = [], int $limit = 0, int $offset = 0): array
+    {
+        [$where, $params] = $this->buildSearchConditions($filters);
+
+        $orderBy = match ((string) ($filters['sort'] ?? 'latest')) {
+            'budget_high' => 'p.budget_max DESC, p.created_at DESC',
+            'budget_low' => 'p.budget_min ASC, p.created_at DESC',
+            'deadline_soon' => 'p.deadline_days ASC, p.created_at DESC',
+            'proposals_low' => 'proposals_count ASC, p.created_at DESC',
+            'views_high' => 'p.views_count DESC, p.created_at DESC',
+            'activity' => 'p.last_activity_at DESC, p.created_at DESC',
+            default => 'p.is_featured DESC, p.is_urgent DESC, p.created_at DESC',
+        };
+
+        $sql = $this->projectSelect() . '
+             WHERE ' . implode(' AND ', $where) . '
+             ORDER BY ' . $orderBy;
+
+        if ($limit > 0) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
+
+        $statement = $this->pdo->prepare($sql);
+
+        foreach ($params as $key => $value) {
+            $statement->bindValue($key, $value);
+        }
+
+        if ($limit > 0) {
+            $statement->bindValue('limit', $limit, PDO::PARAM_INT);
+            $statement->bindValue('offset', max(0, $offset), PDO::PARAM_INT);
+        }
+
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
+    /**
+     * EN: Counts open projects matching the same marketplace filters for pagination.
+     * RU: Считает открытые проекты по тем же фильтрам маркетплейса для пагинации.
+     *
+     * @param array<string, mixed> $filters Search filters / Фильтры поиска
+     * @return int
+     */
+    public function countOpen(array $filters = []): int
+    {
+        [$where, $params] = $this->buildSearchConditions($filters);
+
+        $statement = $this->pdo->prepare(
+            'SELECT COUNT(*)
+             FROM projects p
+             INNER JOIN users u ON u.id = p.client_id
+             WHERE ' . implode(' AND ', $where)
+        );
+        $statement->execute($params);
+
+        return (int) $statement->fetchColumn();
+    }
+
+    /**
+     * EN: Builds shared WHERE conditions and bound params for open-project search and count.
+     * RU: Формирует общие WHERE-условия и параметры для поиска и подсчета открытых проектов.
+     *
+     * @param array<string, mixed> $filters Search filters / Фильтры поиска
+     * @return array{0: array<int, string>, 1: array<string, mixed>}
+     */
+    private function buildSearchConditions(array $filters): array
     {
         $where = ['p.status = "open"'];
         $params = [];
@@ -85,10 +154,11 @@ final class ProjectRepository
         }
 
         if (!empty($filters['q'])) {
+            $needle = '%' . $this->escapeLikePattern((string) $filters['q']) . '%';
             $where[] = '(p.title LIKE :query_title OR p.description LIKE :query_description OR p.skills LIKE :query_skills)';
-            $params['query_title'] = '%' . $filters['q'] . '%';
-            $params['query_description'] = '%' . $filters['q'] . '%';
-            $params['query_skills'] = '%' . $filters['q'] . '%';
+            $params['query_title'] = $needle;
+            $params['query_description'] = $needle;
+            $params['query_skills'] = $needle;
         }
 
         if (!empty($filters['project_type']) && in_array($filters['project_type'], ['fixed', 'hourly'], true)) {
@@ -123,24 +193,19 @@ final class ProjectRepository
             $where[] = 'u.is_verified = 1';
         }
 
-        $orderBy = match ((string) ($filters['sort'] ?? 'latest')) {
-            'budget_high' => 'p.budget_max DESC, p.created_at DESC',
-            'budget_low' => 'p.budget_min ASC, p.created_at DESC',
-            'deadline_soon' => 'p.deadline_days ASC, p.created_at DESC',
-            'proposals_low' => 'proposals_count ASC, p.created_at DESC',
-            'views_high' => 'p.views_count DESC, p.created_at DESC',
-            'activity' => 'p.last_activity_at DESC, p.created_at DESC',
-            default => 'p.is_featured DESC, p.is_urgent DESC, p.created_at DESC',
-        };
+        return [$where, $params];
+    }
 
-        $statement = $this->pdo->prepare(
-            $this->projectSelect() . '
-             WHERE ' . implode(' AND ', $where) . '
-             ORDER BY ' . $orderBy
-        );
-        $statement->execute($params);
-
-        return $statement->fetchAll();
+    /**
+     * EN: Escapes LIKE wildcards so user input cannot inject pattern characters.
+     * RU: Экранирует спецсимволы LIKE, чтобы пользовательский ввод не внедрял шаблоны.
+     *
+     * @param string $value Raw search input / Исходный поисковый ввод
+     * @return string
+     */
+    private function escapeLikePattern(string $value): string
+    {
+        return addcslashes($value, '\\%_');
     }
 
     /**
@@ -764,8 +829,6 @@ final class ProjectRepository
                 $userUpdate = $this->pdo->prepare(
                     'UPDATE users
                      SET completed_projects = completed_projects + 1,
-                         reviews_count = reviews_count + 1,
-                         rating = CASE WHEN rating = 0 THEN 5.00 ELSE LEAST(5.00, rating + 0.02) END,
                          updated_at = NOW()
                      WHERE id = :freelancer_id'
                 );

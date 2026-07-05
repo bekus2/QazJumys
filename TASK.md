@@ -1,9 +1,9 @@
 # TASK.md
 
 Project: QazJumys
-Current version: 1.4.0
+Current version: 1.5.0
 Author: Beck Sarbassov
-Last updated: 2026-06-28
+Last updated: 2026-07-05
 
 ## Objective
 
@@ -38,21 +38,26 @@ Deliver a working PHP freelance marketplace with secure unified accounts, comple
 ## Security Requirements
 
 - Keep `.env` out of Git and out of public web access.
-- Do not publish real passwords or owner credentials in public docs.
+- Do not publish real passwords, password hashes, or owner credentials in public docs or seed files.
+- Create the owner account only via `php bin/create_owner.php`.
+- Keep login rate limiting active (`login_attempts` table must exist).
+- Re-validate account status in the database on state-changing actions.
 - Use `APP_DEBUG=false` on staging/production.
 - Keep `MAIL_ENABLED=false` until mail is verified.
 - Require HTTPS in production.
+- Keep baseline security headers (CSP, X-Frame-Options, nosniff, Referrer-Policy).
 - Protect `storage/uploads` from direct browsing.
 - Validate upload MIME/size and visibility permission before storing.
 - Use CSRF on state-changing actions.
-- Use PDO prepared statements.
+- Use PDO prepared statements and escape LIKE wildcards in search input.
 
 ## Installation Acceptance Criteria
 
 - `.env` created from `.env.example`.
 - `APP_URL` matches the actual local launch path.
 - Database `qazjumys_portal` exists.
-- `schema.sql`, `seed.sql`, and local `demo.sql` import successfully.
+- `schema.sql`, `seed.sql`, and local `demo.sql` import successfully (plus `upgrade_1_5_0.sql` for upgrades).
+- Owner account created via `php bin/create_owner.php`.
 - Database collation is `utf8mb4_unicode_ci`.
 - PHP extensions `pdo_mysql`, `mbstring`, `fileinfo`, `session` are enabled.
 - Document root is `public`, or private folders are blocked by server rules.
@@ -87,5 +92,5 @@ Deliver a working PHP freelance marketplace with secure unified accounts, comple
 
 Author: Beck Sarbassov
 Created: 2026-06-16
-Last updated: 2026-06-28
+Last updated: 2026-07-05
 Copyright: © Beck Sarbassov. All rights reserved.

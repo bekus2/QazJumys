@@ -36,8 +36,12 @@
         </div>
         <div>
             <h2>Байланыс</h2>
-            <p>Email: <?= e($config['app']['mail_to'] ?? 'bek0435@gmail.com') ?></p>
-            <p>WhatsApp: <?= e($config['app']['whatsapp_default'] ?? '+77075080762') ?></p>
+            <?php if (!empty($config['app']['mail_to'])): ?>
+                <p>Email: <?= e($config['app']['mail_to']) ?></p>
+            <?php endif; ?>
+            <?php if (!empty($config['app']['whatsapp_default'])): ?>
+                <p>WhatsApp: <?= e($config['app']['whatsapp_default']) ?></p>
+            <?php endif; ?>
         </div>
     </div>
     <div class="container footer-bottom">

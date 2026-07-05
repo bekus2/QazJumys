@@ -3,9 +3,9 @@
  * Project: QazJumys
  * File: config.php
  * Author: Beck Sarbassov
- * Version: 1.4.0
+ * Version: 1.5.0
  * Release Date: 2026-06-16
- * Last Updated: 2026-06-28
+ * Last Updated: 2026-07-05
  * Copyright: © Beck Sarbassov. All rights reserved.
  *
  * EN: Central configuration loaded from environment variables, including mail and upload limits.
@@ -21,10 +21,10 @@ return [
         'debug' => (bool) env_value('APP_DEBUG', false),
         'url' => (string) env_value('APP_URL', 'http://127.0.0.1:8014'),
         'session_name' => (string) env_value('SESSION_NAME', 'qazjumys_session'),
-        'mail_to' => (string) env_value('MAIL_TO', 'bek0435@gmail.com'),
+        'mail_to' => (string) env_value('MAIL_TO', ''),
         'mail_enabled' => (bool) env_value('MAIL_ENABLED', false),
         'mail_from' => (string) env_value('MAIL_FROM', 'no-reply@qazjumys.local'),
-        'whatsapp_default' => (string) env_value('WHATSAPP_DEFAULT', '+77075080762'),
+        'whatsapp_default' => (string) env_value('WHATSAPP_DEFAULT', ''),
         'upload_max_bytes' => (int) env_value('UPLOAD_MAX_BYTES', 5242880),
         'upload_allowed_mimes' => [
             'application/pdf',

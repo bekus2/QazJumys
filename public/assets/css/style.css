@@ -1672,3 +1672,12 @@ p {
         width: 100%;
     }
 }
+
+/* v1.5.0: marketplace pagination */
+.pagination {
+    align-items: center;
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    padding: 12px 0;
+}
